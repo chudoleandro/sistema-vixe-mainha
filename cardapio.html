@@ -5,14 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vixe Mainha Marmitaria e Cuscuzeria - Cardápio Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configurações para abrir como Aplicativo Nativo (PWA) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vixe Mainha">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+
+<!-- Ícone do App para a tela inicial -->
+<link rel="apple-touch-icon" href="/app/static/logo.jpeg">
+<link rel="icon" type="image/jpeg" href="/app/static/logo.jpeg">
     
-    <!-- SDKs do Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, setDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-        
-        window.firebaseModules = { initializeApp, getFirestore, collection, setDoc, doc, onSnapshot };
-    </script>
+    <!-- SDKs do Firebase Compat (Mesma arquitetura e versão usada no index.html) -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +38,7 @@
         <!-- TOPHEADER COM IMAGEM DE FUNDO cabecalho.jpg -->
         <header class="relative bg-slate-900 text-white border-b border-amber-300/60 shadow-md overflow-hidden">
             <div class="absolute inset-0 z-0">
-                <img src="./app/static/cabecalho.jpg" alt="Fundo Cabeçalho" class="w-full h-full object-cover opacity-70">
+                <img src="/app/static/cabecalho.jpg" alt="Cabeçalho"class="w-full h-full object-cover opacity-70">
                 <div class="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-900/40 to-slate-950/60"></div>
             </div>
 
@@ -45,7 +51,7 @@
 
                 <!-- Logo -->
                 <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-2xl shadow-black/40 mb-3 border-2 border-amber-400 bg-white flex items-center justify-center p-0.5">
-                    <img src="./app/static/logo.jpeg" alt="Logo Vixe Mainha" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-tr from-red-600 via-amber-500 to-yellow-400 flex items-center justify-center font-black text-white text-xl\'>VM</div>';">
+                    <img src="/app/static/logo.jpeg" alt="Logo" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-tr from-red-600 via-amber-500 to-yellow-400 flex items-center justify-center font-black text-white text-xl\'>VM</div>';">
                 </div>
 
                 <!-- Nome abaixo da logo -->
