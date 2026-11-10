@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vixe Mainha Marmitaria e Cuscuzeria - Cardápio Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Configurações do PWA e Ícone do App -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vixe Mainha">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Ícone para iOS e Android -->
+    <link rel="apple-touch-icon" href="/app/static/logo.jpeg">
+    <link rel="icon" type="image/jpeg" href="/app/static/logo.jpeg">
     
     <!-- SDKs do Firebase Compat (Versão estável para iframe) -->
     <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
@@ -287,14 +299,20 @@
         });
 
         async function salvarPedidoNoFirebase(pedidoObj) {
-            if(!db) return;
-            try {
-                const { doc, setDoc } = window.firebaseModules;
-                await setDoc(doc(db, 'pedidos', String(pedidoObj.id)), pedidoObj);
-            } catch(e) {
-                console.error("Erro ao enviar pedido para o Firebase:", e);
-            }
-        }
+    if (!db) {
+        console.error("Banco de dados (db) não inicializado!");
+        return;
+    }
+    
+    try {
+        // Usa a sintaxe correta do Firebase Compat v11
+        await db.collection('pedidos').doc(String(pedidoObj.id)).set(pedidoObj);
+        console.log("Pedido salvo com sucesso no Firebase!", pedidoObj.id);
+    } catch(e) {
+        console.error("Erro ao enviar pedido para o Firebase:", e);
+        alert("Erro ao enviar pedido. Verifique sua conexão.");
+    }
+}
 
         function renderizarCardapioEstiloIFood() {
             const container = document.getElementById('main-cardapio-container');
