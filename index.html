@@ -1777,55 +1777,110 @@
             window.print();
         }
 
-        function finalizarPedidoPDV() {
-            const cliente = document.getElementById('pdv-cliente').value;
-            const tel = document.getElementById('pdv-tel').value;
-            const end = document.getElementById('pdv-end').value;
-            const pagamento = document.getElementById('pdv-pagamento').value;
-            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
+        async function finalizarPedidoPDV() {
+    const elCliente = document.getElementById('pdv-cliente');
+    const elTel = document.getElementById('pdv-tel');
+    const elEnd = document.getElementById('pdv-end');
+    const elPagamento = document.getElementById('pdv-pagamento');
+    const elTaxa = document.getElementById('pdv-taxa');
 
-            if(!cliente || !end || carrinho.length === 0) return alert('Preencha cliente, endereco e adicione itens no carrinho!');
+    const cliente = elCliente ? elCliente.value : '';
+    const tel = elTel ? elTel.value : '';
+    const end = elEnd ? elEnd.value : '';
+    const pagamento = elPagamento ? elPagamento.value : 'DINHEIRO';
+    const taxa = elTaxa ? parseFloat(elTaxa.value) || 0 : 0;
 
-            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
-            const total = subtotal + taxa;
+    if (!cliente || !end || !carrinho || carrinho.length === 0) {
+        alert('Preencha cliente, endereço e adicione itens no carrinho!');
+        return;
+    }
 
-            const novoPedido = {
-                id: Date.now(),
-                numero: pedidos.length + 101,
-                cliente, tel, end,
-                itens: [...carrinho],
-                taxa, total, pagamento,
-                status: 'preparacao'
-            };
+    if (!db) {
+        console.error("Banco de dados não inicializado!");
+        alert("Erro de conexão com o banco de dados.");
+        return;
+    }
 
+    try {
+        const subtotal = carrinho.reduce((acc, i) => acc + (i.totalItem || 0), 0);
+        const total = subtotal + taxa;
+        const timestampId = String(Date.now());
+
+        // 1. Cria o objeto do novo pedido de balcão
+        const novoPedido = {
+            id: timestampId,
+            numero: (pedidos ? pedidos.length : 0) + 101,
+            cliente,
+            tel,
+            end,
+            itens: [...carrinho],
+            taxa,
+            total,
+            pagamento,
+            status: 'preparacao' // Pedido de balcão já entra direto na preparação da cozinha
+        };
+
+        // Salva o pedido no Firebase
+        await db.collection('pedidos').doc(timestampId).set(novoPedido);
+        console.log("Pedido de balcão salvo no Firebase:", timestampId);
+
+        if (typeof pedidos !== 'undefined') {
             pedidos.push(novoPedido);
-            salvarDadosLocal();
-            salvarNoFirebase('pedidos', novoPedido.id, novoPedido);
+        }
 
-            const novoCaixa = {
-                id: Date.now(),
-                data: new Date().toLocaleString('pt-BR'),
-                tipo: 'ENTRADA',
-                descricao: `Venda Pedido #${novoPedido.numero} - ${cliente}`,
-                pagamento,
-                valor: total,
-                taxa
-            };
+        // 2. Cria o lançamento correspondente no Caixa
+        const novoCaixa = {
+            id: String(Date.now() + 1), // Garante ID único diferente do pedido
+            data: new Date().toLocaleString('pt-BR'),
+            tipo: 'ENTRADA',
+            descricao: `Venda Pedido #${novoPedido.numero} - ${cliente}`,
+            pagamento,
+            valor: total,
+            taxa
+        };
+
+        // Salva o caixa no Firebase
+        await db.collection('caixa').doc(novoCaixa.id).set(novoCaixa);
+        console.log("Caixa atualizado no Firebase");
+
+        if (typeof caixa !== 'undefined') {
             caixa.unshift(novoCaixa);
+        }
+
+        if (typeof salvarDadosLocal === 'function') {
             salvarDadosLocal();
-            salvarNoFirebase('caixa', novoCaixa.id, novoCaixa);
+        }
 
+        // 3. Imprime a comanda se a função existir
+        if (typeof imprimirComanda === 'function') {
             imprimirComanda(novoPedido);
+        }
 
-            carrinho = [];
-            document.getElementById('pdv-cliente').value = '';
-            document.getElementById('pdv-tel').value = '';
-            document.getElementById('pdv-end').value = '';
-            document.getElementById('pdv-valor-pago').value = '';
-            renderizarCarrinho();
+        // 4. Limpa a tela e o carrinho para uma nova venda
+        carrinho = [];
+        if (elCliente) elCliente.value = '';
+        if (elTel) elTel.value = '';
+        if (elEnd) elEnd.value = '';
+        
+        const elValorPago = document.getElementById('pdv-valor-pago');
+        if (elValorPago) elValorPago.value = '';
+
+        if (typeof renderizarCarrinho === 'function') renderizarCarrinho();
+        if (typeof renderizarCozinha === 'function') renderizarCozinha();
+        if (typeof renderizarCaixa === 'function') renderizarCaixa();
+        
+        // Redireciona para a aba da cozinha para acompanhar o preparo
+        if (typeof mudarAba === 'function') {
             mudarAba('cozinha');
         }
 
+        console.log("Venda de balcão finalizada com sucesso!");
+
+    } catch (error) {
+        console.error("Erro ao finalizar venda no PDV:", error);
+        alert("Erro ao finalizar a venda. Verifique o console (F12).");
+    }
+}
         function renderizarCozinha(dataFiltroCustom = null) {
             const colunas = ['pendente', 'preparacao', 'entrega', 'finalizado'];
             const hojeStr = obterDataAtualStr();
