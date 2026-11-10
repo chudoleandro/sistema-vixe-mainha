@@ -1601,181 +1601,263 @@
             }
         }
 
-        function carregarSelectsPDV() {
-            const selCuscuz = document.getElementById('pdv-select-cuscuz');
-            const selMarmita = document.getElementById('pdv-select-marmita');
-            const selSobremesa = document.getElementById('pdv-select-sobremesa');
-            const selBebida = document.getElementById('pdv-select-bebida');
+        // 1. Carrega os selects do PDV baseados na lista de pratos do cardápio
+function carregarSelectsPDV() {
+    const selCuscuz = document.getElementById('pdv-select-cuscuz');
+    const selMarmita = document.getElementById('pdv-select-marmita');
+    const selSobremesa = document.getElementById('pdv-select-sobremesa');
+    const selBebida = document.getElementById('pdv-select-bebida');
 
-            if(!selCuscuz || !selMarmita || !selSobremesa || !selBebida) return;
+    if(!selCuscuz || !selMarmita || !selSobremesa || !selBebida) return;
 
-            selCuscuz.innerHTML = '<option value="">-- Selecione o Cuscuz --</option>';
-            selMarmita.innerHTML = '<option value="">-- Selecione a Marmita --</option>';
-            selSobremesa.innerHTML = '<option value="">-- Selecione a Sobremesa --</option>';
-            selBebida.innerHTML = '<option value="">-- Selecione a Bebida / Outros --</option>';
+    selCuscuz.innerHTML = '<option value="">-- Selecione o Cuscuz --</option>';
+    selMarmita.innerHTML = '<option value="">-- Selecione a Marmita --</option>';
+    selSobremesa.innerHTML = '<option value="">-- Selecione a Sobremesa --</option>';
+    selBebida.innerHTML = '<option value="">-- Selecione a Bebida / Outros --</option>';
 
-            cardapio.forEach(p => {
-                const opt = `<option value="${p.id}">${p.nome} (${p.tamanho}) - R$ ${p.preco.toFixed(2)}</option>`;
-                if(p.categoria === 'Cuscuz') {
-                    selCuscuz.innerHTML += opt;
-                } else if(p.categoria === 'Marmita') {
-                    selMarmita.innerHTML += opt;
-                } else if(p.categoria === 'Sobremesa') {
-                    selSobremesa.innerHTML += opt;
-                } else {
-                    selBebida.innerHTML += opt;
-                }
-            });
+    if (typeof cardapio === 'undefined' || !cardapio) return;
+
+    cardapio.forEach(p => {
+        const precoNum = Number(p.preco || 0);
+        const opt = `<option value="${p.id}">${p.nome || 'Prato'} (${p.tamanho || 'Único'}) - R$ ${precoNum.toFixed(2)}</option>`;
+        
+        const cat = (p.categoria || '').toLowerCase();
+        if(cat.includes('cuscuz')) {
+            selCuscuz.innerHTML += opt;
+        } else if(cat.includes('marmita')) {
+            selMarmita.innerHTML += opt;
+        } else if(cat.includes('sobremesa')) {
+            selSobremesa.innerHTML += opt;
+        } else {
+            selBebida.innerHTML += opt;
         }
+    });
+}
 
-        function adicionarItemPorSelect(selectId, qtdId) {
-            const sel = document.getElementById(selectId);
-            if(!sel || !sel.value) return alert('Selecione um item valido dessa categoria!');
+// 2. Adiciona item selecionado no select para o carrinho do PDV
+function adicionarItemPorSelect(selectId, qtdId) {
+    const sel = document.getElementById(selectId);
+    const qtdEl = document.getElementById(qtdId);
+    
+    if(!sel || !sel.value) {
+        alert('Selecione um item válido dessa categoria!');
+        return;
+    }
 
-            const id = parseInt(sel.value);
-            const qtd = parseInt(document.getElementById(qtdId).value) || 1;
-            const item = cardapio.find(i => i.id === id);
-            if(!item) return;
+    const idItem = sel.value;
+    const qtd = parseInt(qtdEl ? qtdEl.value : 1) || 1;
+    
+    // Busca o item considerando ID como string ou número
+    const item = cardapio.find(i => String(i.id) === String(idItem));
+    if(!item) {
+        alert('Item não encontrado no cardápio.');
+        return;
+    }
 
-            carrinho.push({ ...item, qtdCarrinho: qtd, totalItem: item.preco * qtd });
-            renderizarCarrinho();
-            sel.value = '';
-        }
+    const precoUnit = Number(item.preco || 0);
 
-        function renderizarCarrinho() {
-            const box = document.getElementById('carrinho-itens');
-            if(!box) return;
-            box.innerHTML = '';
-            if(carrinho.length === 0) {
-                box.innerHTML = '<p class="text-[11px] text-slate-400 italic">Nenhum produto adicionado.</p>';
-                atualizarTotalPDV(); return;
-            }
-            carrinho.forEach((c, idx) => {
-                box.innerHTML += `
-                    <div class="flex justify-between items-center py-1 text-[11px]">
-                        <div>
-                            <p class="font-bold text-slate-800">${c.nome} (${c.tamanho})</p>
-                            <p class="text-slate-500">${c.qtdCarrinho}x R$ ${c.preco.toFixed(2)}</p>
-                        </div>
-                        <div class="flex items-center space-x-1.5">
-                            <span class="font-extrabold text-slate-800">R$ ${c.totalItem.toFixed(2)}</span>
-                            <button onclick="removerItemCarrinho(${idx})" class="text-rose-600 font-bold">✕</button>
-                        </div>
-                    </div>
-                `;
-            });
-            atualizarTotalPDV();
-        }
+    if (typeof carrinho === 'undefined') {
+        window.carrinho = [];
+    }
 
-        function removerItemCarrinho(idx) {
-            carrinho.splice(idx, 1);
-            renderizarCarrinho();
-        }
+    carrinho.push({ 
+        ...item, 
+        qtdCarrinho: qtd, 
+        totalItem: precoUnit * qtd 
+    });
 
-        function atualizarTotalPDV() {
-            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
-            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
-            const totalEl = document.getElementById('pdv-total-txt');
-            if(totalEl) totalEl.innerText = `R$ ${(subtotal + taxa).toFixed(2)}`;
-            calcularTroco();
-        }
+    renderizarCarrinho();
+    sel.value = '';
+    if (qtdEl) qtdEl.value = '1';
+}
 
-        function toggleTroco(val) {
-            const box = document.getElementById('box-troco');
-            if(box) {
-                if(val === 'DINHEIRO') box.classList.remove('hidden'); else box.classList.add('hidden');
-            }
-        }
+// 3. Renderiza a lista de itens no carrinho do PDV
+function renderizarCarrinho() {
+    const box = document.getElementById('carrinho-itens');
+    if(!box) return;
+    
+    box.innerHTML = '';
+    
+    if(!carrinho || carrinho.length === 0) {
+        box.innerHTML = '<p class="text-[11px] text-slate-400 italic">Nenhum produto adicionado.</p>';
+        atualizarTotalPDV(); 
+        return;
+    }
 
-        function calcularTroco() {
-            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
-            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
-            const total = subtotal + taxa;
-            const pago = parseFloat(document.getElementById('pdv-valor-pago').value) || 0;
-            const troco = pago - total;
-            const txt = document.getElementById('pdv-troco-txt');
-            if(txt) {
-                if(troco >= 0) {
-                    txt.innerText = `Troco: R$ ${troco.toFixed(2)}`;
-                    txt.className = 'text-[11px] font-bold text-emerald-700';
-                } else {
-                    txt.innerText = `Faltam: R$ ${Math.abs(troco).toFixed(2)}`;
-                    txt.className = 'text-[11px] font-bold text-rose-600';
-                }
-            }
-        }
-
-        function imprimirComanda(pedido) {
-            const dataHora = new Date(pedido.id).toLocaleString('pt-BR');
-            let trocoTxt = '';
-            
-            if(pedido.pagamento === 'DINHEIRO' && pedido.trocoInfo) {
-                const valorPago = parseFloat(pedido.trocoInfo) || 0;
-                const troco = valorPago - pedido.total;
-                if(troco > 0) {
-                    trocoTxt = `<br>Troco para: R$ ${valorPago.toFixed(2)} (Troco: R$ ${troco.toFixed(2)})`;
-                }
-            }
-
-            let tabelaItensHtml = '';
-            pedido.itens.forEach(i => {
-                tabelaItensHtml += `
-                    <tr>
-                        <td style="padding: 3px 0; vertical-align: top;"><b>${i.qtdCarrinho}x</b></td>
-                        <td style="padding: 3px 0; vertical-align: top;">${i.nome} (${i.tamanho})</td>
-                        <td style="padding: 3px 0; text-align: right; vertical-align: top;">R$ ${i.totalItem.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            const comandaBox = document.getElementById('comanda-impressao');
-            comandaBox.innerHTML = `
-                <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
-                    <h2 style="font-size: 14px; font-weight: bold; margin: 0;">VIXE MAINHA</h2>
-                    <p style="font-size: 10px; margin: 2px 0;">Marmitaria & Cuscuzeria Pro</p>
-                    <p style="font-size: 9px; margin: 0;">--------------------------------</p>
-                    <h3 style="font-size: 16px; font-weight: bold; margin: 4px 0;">PEDIDO #${pedido.numero}</h3>
-                    <p style="font-size: 9px; margin: 0;">Data: ${dataHora}</p>
+    carrinho.forEach((c, idx) => {
+        const precoUnit = Number(c.preco || 0);
+        const totalIt = Number(c.totalItem || 0);
+        
+        box.innerHTML += `
+            <div class="flex justify-between items-center py-1 text-[11px] border-b border-slate-100">
+                <div>
+                    <p class="font-bold text-slate-800">${c.nome || 'Item'} (${c.tamanho || 'Único'})</p>
+                    <p class="text-slate-500">${c.qtdCarrinho || 1}x R$ ${precoUnit.toFixed(2)}</p>
                 </div>
-
-                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
-                    <p style="margin: 2px 0;"><b>CLIENTE:</b> ${pedido.cliente.toUpperCase()}</p>
-                    <p style="margin: 2px 0;"><b>TEL:</b> ${pedido.tel || 'Nao informado'}</p>
-                    <p style="margin: 2px 0;"><b>ENDERECO:</b> ${pedido.end}</p>
+                <div class="flex items-center space-x-1.5">
+                    <span class="font-extrabold text-slate-800">R$ ${totalIt.toFixed(2)}</span>
+                    <button onclick="removerItemCarrinho(${idx})" class="text-rose-600 font-bold px-1 py-0.5 hover:bg-rose-50 rounded">✕</button>
                 </div>
+            </div>
+        `;
+    });
+    atualizarTotalPDV();
+}
 
-                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
-                    <p style="font-weight: bold; margin-bottom: 4px;">ITENS DO PEDIDO:</p>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-                        ${tabelaItensHtml}
-                    </table>
-                </div>
+// 4. Remove item do carrinho
+function removerItemCarrinho(idx) {
+    if (typeof carrinho !== 'undefined') {
+        carrinho.splice(idx, 1);
+        renderizarCarrinho();
+    }
+}
 
-                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
-                    <table style="width: 100%; font-size: 11px;">
-                        <tr>
-                            <td>Subtotal:</td>
-                            <td style="text-align: right;">R$ ${(pedido.total - pedido.taxa).toFixed(2)}</td>
-                        </tr>
-                        <tr>
-                            <td>Taxa de Entrega:</td>
-                            <td style="text-align: right;">R$ ${pedido.taxa.toFixed(2)}</td>
-                        </tr>
-                        <tr style="font-weight: bold; font-size: 13px;">
-                            <td style="padding-top: 4px;">TOTAL:</td>
-                            <td style="text-align: right; padding-top: 4px;">R$ ${pedido.total.toFixed(2)}</td>
-                        </tr>
-                    </table>
-                </div>
+// 5. Atualiza os totais e taxas da tela do PDV
+function atualizarTotalPDV() {
+    if (typeof carrinho === 'undefined') return;
+    
+    const subtotal = carrinho.reduce((acc, i) => acc + Number(i.totalItem || 0), 0);
+    const taxaEl = document.getElementById('pdv-taxa');
+    const taxa = taxaEl ? parseFloat(taxaEl.value) || 0 : 0;
+    
+    const totalEl = document.getElementById('pdv-total-txt');
+    if(totalEl) totalEl.innerText = `R$ ${(subtotal + taxa).toFixed(2)}`;
+    
+    calcularTroco();
+}
 
-                <div style="text-align: center; padding-top: 2px;">
-                    <p style="font-size: 11px; font-weight: bold; margin: 2px 0;">PAGAMENTO: ${pedido.pagamento}${trocoTxt}</p>
-                    <p style="font-size: 9px; margin-top: 8px;">Obrigado pela preferencia!</p>
-                </div>
+// 6. Mostra ou esconde o campo de troco dependendo da forma de pagamento
+function toggleTroco(val) {
+    const box = document.getElementById('box-troco');
+    if(box) {
+        if(val === 'DINHEIRO') {
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
+}
+
+// 7. Calcula o troco em tempo real
+function calcularTroco() {
+    if (typeof carrinho === 'undefined') return;
+    
+    const subtotal = carrinho.reduce((acc, i) => acc + Number(i.totalItem || 0), 0);
+    const taxaEl = document.getElementById('pdv-taxa');
+    const taxa = taxaEl ? parseFloat(taxaEl.value) || 0 : 0;
+    const total = subtotal + taxa;
+    
+    const pagoEl = document.getElementById('pdv-valor-pago');
+    const pago = pagoEl ? parseFloat(pagoEl.value) || 0 : 0;
+    const troco = pago - total;
+    
+    const txt = document.getElementById('pdv-troco-txt');
+    if(txt) {
+        if(pago === 0) {
+            txt.innerText = '';
+            return;
+        }
+        if(troco >= 0) {
+            txt.innerText = `Troco: R$ ${troco.toFixed(2)}`;
+            txt.className = 'text-[11px] font-bold text-emerald-700';
+        } else {
+            txt.innerText = `Faltam: R$ ${Math.abs(troco).toFixed(2)}`;
+            txt.className = 'text-[11px] font-bold text-rose-600';
+        }
+    }
+}
+
+// 8. Função de Impressão de Comanda Corrigida
+function imprimirComanda(pedido) {
+    // Tratamento seguro da data do pedido
+    let dataHora = 'Data indisponível';
+    try {
+        const timestampNum = Number(pedido.id);
+        if (!isNaN(timestampNum)) {
+            dataHora = new Date(timestampNum).toLocaleString('pt-BR');
+        } else {
+            dataHora = new Date().toLocaleString('pt-BR');
+        }
+    } catch(e) {
+        dataHora = new Date().toLocaleString('pt-BR');
+    }
+
+    let trocoTxt = '';
+    const totalPedido = Number(pedido.total || 0);
+    const taxaPedido = Number(pedido.taxa || 0);
+    const subtotalPedido = totalPedido - taxaPedido;
+
+    if(pedido.pagamento === 'DINHEIRO' && pedido.trocoInfo) {
+        const valorPago = parseFloat(pedido.trocoInfo) || 0;
+        const troco = valorPago - totalPedido;
+        if(troco > 0) {
+            trocoTxt = `<br>Troco para: R$ ${valorPago.toFixed(2)} (Troco: R$ ${troco.toFixed(2)})`;
+        }
+    }
+
+    let tabelaItensHtml = '';
+    if (pedido.itens && Array.isArray(pedido.itens)) {
+        pedido.itens.forEach(i => {
+            tabelaItensHtml += `
+                <tr>
+                    <td style="padding: 3px 0; vertical-align: top;"><b>${i.qtdCarrinho || 1}x</b></td>
+                    <td style="padding: 3px 0; vertical-align: top;">${i.nome || 'Item'} (${i.tamanho || 'Único'})</td>
+                    <td style="padding: 3px 0; text-align: right; vertical-align: top;">R$ ${Number(i.totalItem || 0).toFixed(2)}</td>
+                </tr>
             `;
+        });
+    }
 
-            window.print();
-        }
+    const comandaBox = document.getElementById('comanda-impressao');
+    if (!comandaBox) return;
+
+    comandaBox.innerHTML = `
+        <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+            <h2 style="font-size: 14px; font-weight: bold; margin: 0;">VIXE MAINHA</h2>
+            <p style="font-size: 10px; margin: 2px 0;">Marmitaria & Cuscuzeria Pro</p>
+            <p style="font-size: 9px; margin: 0;">--------------------------------</p>
+            <h3 style="font-size: 16px; font-weight: bold; margin: 4px 0;">PEDIDO #${pedido.numero || '0'}</h3>
+            <p style="font-size: 9px; margin: 0;">Data: ${dataHora}</p>
+        </div>
+
+        <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+            <p style="margin: 2px 0;"><b>CLIENTE:</b> ${(pedido.cliente || 'CLIENTE').toUpperCase()}</p>
+            <p style="margin: 2px 0;"><b>TEL:</b> ${pedido.tel || 'Não informado'}</p>
+            <p style="margin: 2px 0;"><b>ENDEREÇO:</b> ${pedido.end || 'Balcão / Retirada'}</p>
+        </div>
+
+        <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+            <p style="font-weight: bold; margin-bottom: 4px;">ITENS DO PEDIDO:</p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                ${tabelaItensHtml}
+            </table>
+        </div>
+
+        <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+            <table style="width: 100%; font-size: 11px;">
+                <tr>
+                    <td>Subtotal:</td>
+                    <td style="text-align: right;">R$ ${subtotalPedido.toFixed(2)}</td>
+                </tr>
+                <tr>
+                    <td>Taxa de Entrega:</td>
+                    <td style="text-align: right;">R$ ${taxaPedido.toFixed(2)}</td>
+                </tr>
+                <tr style="font-weight: bold; font-size: 13px;">
+                    <td style="padding-top: 4px;">TOTAL:</td>
+                    <td style="text-align: right; padding-top: 4px;">R$ ${totalPedido.toFixed(2)}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: center; padding-top: 2px;">
+            <p style="font-size: 11px; font-weight: bold; margin: 2px 0;">PAGAMENTO: ${pedido.pagamento || 'DINHEIRO'}${trocoTxt}</p>
+            <p style="font-size: 9px; margin-top: 8px;">Obrigado pela preferência!</p>
+        </div>
+    `;
+
+    window.print();
+}
 
         async function finalizarPedidoPDV() {
     const elCliente = document.getElementById('pdv-cliente');
