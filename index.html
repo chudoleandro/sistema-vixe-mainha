@@ -895,17 +895,26 @@
         }
 
         function sincronizarColecaoTempoReal(nomeColecao, callback) {
-            if(!db) return;
-            db.collection(nomeColecao).onSnapshot((snapshot) => {
-                let lista = [];
-                snapshot.forEach(doc => {
-                    lista.push(doc.data());
-                });
-                if(lista.length > 0) {
-                    callback(lista);
-                }
-            });
-        }
+    if(!db) {
+        console.error("Banco de dados (db) não inicializado!");
+        return;
+    }
+    
+    db.collection(nomeColecao).onSnapshot((snapshot) => {
+        let lista = [];
+        snapshot.forEach(doc => {
+            let item = doc.data();
+            item.id = doc.id; // Importante para gerenciar ou atualizar o pedido depois
+            lista.push(item);
+        });
+        
+        // Sempre chama o callback, permitindo atualizar a tela mesmo se a lista estiver vazia
+        callback(lista);
+        
+    }, (error) => {
+        console.error(`Erro ao sincronizar a coleção ${nomeColecao}:`, error);
+    });
+}
 
         function obterDataAtualStr(d = new Date()) {
             const dia = String(d.getDate()).padStart(2, '0');
