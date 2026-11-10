@@ -560,7 +560,14 @@
 }
 
         function confirmarAdicionarPrato() {
-    if (!pratoSelecionado) return;
+    console.log("=== INICIO: confirmarAdicionarPrato ===");
+    
+    if (!pratoSelecionado) {
+        console.error("Erro: Nenhum prato selecionado!");
+        alert("Erro: Nenhum prato selecionado.");
+        return;
+    }
+    console.log("Prato selecionado:", pratoSelecionado.nome);
 
     const talherInput = document.querySelector('input[name="talher-opt"]:checked');
     const talheres = talherInput ? talherInput.value : 'NÃO';
@@ -593,27 +600,37 @@
     
     const idPratoStr = String(pratoSelecionado.id);
 
-    // Verifica se já existe um item idêntico (mesmo ID em string e mesma observação/adicionais) no carrinho
+    // Garante que carrinhoCli é um array
+    if (!Array.isArray(window.carrinhoCli)) {
+        window.carrinhoCli = [];
+    }
+
+    // Verifica se já existe um item idêntico no carrinho
     const existente = carrinhoCli.find(c => String(c.id) === idPratoStr && c.obsItem === obsFinal);
 
     if (existente) {
         existente.qtd += qtdDesejada;
+        console.log("Quantidade atualizada para o item existente no carrinho.");
     } else {
         carrinhoCli.push({
             ...pratoSelecionado,
-            id: idPratoStr, // Garante ID como string
+            id: idPratoStr,
             preco: precoFinal,
             nome: obsFinal ? `${pratoSelecionado.nome} ${obsFinal}` : pratoSelecionado.nome,
             qtd: qtdDesejada,
             obsItem: obsFinal
         });
+        console.log("Novo item adicionado ao carrinho.");
     }
 
-    // Atualiza a interface do carrinho e fecha o modal
+    // Atualiza a interface do carrinho
     if (typeof atualizarBarraCarrinho === 'function') {
         atualizarBarraCarrinho();
+    } else {
+        console.warn("Função atualizarBarraCarrinho não encontrada.");
     }
     
+    // Fecha o modal de detalhes
     if (typeof fecharDetalhePrato === 'function') {
         fecharDetalhePrato();
     } else {
@@ -621,7 +638,7 @@
         if (modal) modal.classList.add('hidden');
     }
 
-    console.log("Item adicionado ao carrinho com sucesso!");
+    console.log("=== FIM: Item adicionado com sucesso! ===");
 }
 
         function atualizarBarraCarrinho() {
