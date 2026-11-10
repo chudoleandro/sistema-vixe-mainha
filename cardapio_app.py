@@ -14,16 +14,32 @@ st.set_page_config(
 # Estilo CSS para zerar margens e forçar tela cheia
 st.markdown("""
     <style>
+        /* Esconde cabeçalho, rodapé e menu do Streamlit */
+        #MainMenu {visibility: hidden;}
         header {visibility: hidden;}
         footer {visibility: hidden;}
-        #MainMenu {visibility: hidden;}
+        
+        /* Esconde o botão flutuante de 'Hosted with Streamlit' */
+        .viewerBadge_container__1QSob, .styles_viewerBadge__1yG5_, [data-testid="stStatusWidget"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* Força o site a ocupar 100% da tela sem margens */
         .block-container {
             padding: 0rem !important;
+            margin: 0 !important;
             max-width: 100% !important;
         }
+        
         iframe {
-            width: 100% !important;
+            width: 100vw !important;
             height: 100vh !important;
+            border: none !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 999999;
         }
     </style>
 """, unsafe_allow_html=True)
