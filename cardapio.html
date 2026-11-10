@@ -6,7 +6,7 @@
     <title>Vixe Mainha Marmitaria e Cuscuzeria - Cardápio Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- SDKs do Firebase Compat (Mesma arquitetura e versão usada no index.html) -->
+    <!-- SDKs do Firebase Compat (Versão estável para iframe) -->
     <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
 
@@ -259,16 +259,24 @@
             };
 
             try {
-                const { initializeApp, getFirestore, collection, onSnapshot } = window.firebaseModules;
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
+                // Inicializa usando o SDK Compat global
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                db = firebase.firestore();
 
-                onSnapshot(collection(db, 'cardapio'), (snapshot) => {
+                console.log("Firebase conectado com sucesso no cardápio!");
+
+                // Ouve as alterações na coleção 'cardapio' em tempo real
+                db.collection('cardapio').onSnapshot((snapshot) => {
                     cardapio = [];
                     snapshot.forEach(doc => {
                         cardapio.push(doc.data());
                     });
+                    console.log("Pratos carregados:", cardapio.length);
                     renderizarCardapioEstiloIFood();
+                }, (error) => {
+                    console.error("Erro na escuta do Firestore (verifique as regras de segurança):", error);
                 });
 
             } catch(e) {
