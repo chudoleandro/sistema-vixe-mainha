@@ -300,64 +300,111 @@
 
         async function enviarPedidoParaFirebase() {
     if (!db) {
+        console.error("Erro: Instância do Firestore 'db' não encontrada.");
         alert("Erro de conexão com o banco de dados.");
         return;
     }
 
-    // Coleta os dados dos campos do cardápio do cliente
-    const nomeInput = document.getElementById('nome-cliente');
-    const telInput = document.getElementById('tel-cliente');
-    const endInput = document.getElementById('end-cliente');
-    const pagSelect = document.getElementById('forma-pagamento');
-    const trocoInput = document.getElementById('troco-para');
+    // Coleta os dados utilizando os IDs corretos do seu formulário HTML (`cli-...`)
+    const nomeInput = document.getElementById('cli-nome');
+    const telInput = document.getElementById('cli-tel');
+    const endInput = document.getElementById('cli-end');
+    const obsInput = document.getElementById('cli-obs');
+    const pagSelect = document.getElementById('cli-pagamento');
+    const trocoInput = document.getElementById('cli-troco');
 
     const nome = nomeInput ? nomeInput.value.trim() : '';
     const tel = telInput ? telInput.value.trim() : '';
     const end = endInput ? endInput.value.trim() : '';
-    const pagamento = pagSelect ? pagSelect.value : 'DINHEIRO';
-    const trocoInfo = trocoInput ? trocoInput.value : '';
+    const obs = obsInput ? obsInput.value.trim() : '';
+    const pagamento = pagSelect ? pagSelect.value : 'PIX';
+    const trocoInfo = trocoInput ? trocoInput.value.trim() : '';
 
-    if (!nome || !end || !carrinhoCli || carrinhoCli.length === 0) {
-        alert('Por favor, preencha seu nome, endereço e adicione itens ao carrinho!');
+    const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
+
+    if (!nome || !tel || !end || carrinho.length === 0) {
+        alert('Por favor, preencha seu nome, telefone, endereço e adicione itens ao carrinho!');
         return;
     }
 
-    const subtotal = carrinhoCli.reduce((acc, i) => acc + (i.totalItem || 0), 0);
-    const totalGeral = subtotal + TAXA_ENTREGA;
+    // Calcula o subtotal e o total geral de forma segura
+    const subtotal = carrinho.reduce((acc, i) => {
+        const precoItem = parseFloat(i.preco || 0);
+        const qtdItem = parseInt(i.qtd || 1);
+        return acc + (precoItem * qtdItem);
+    }, 0);
+
+    const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
+    const totalGeral = subtotal + taxa;
     const pedidoId = String(Date.now());
     
-    // Gera um número de pedido aleatório de 3 dígitos se não houver contador
-    const numeroPedido = Math.floor(Math.random() * 900) + 100;
+    // Gera um número de pedido aleatório de 3 dígitos (101 a 999)
+    const numeroPedido = Math.floor(Math.random() * 900) + 101;
+
+    const enderecoFinal = obs ? `${end} (Obs: ${obs})` : end;
 
     const novoPedido = {
         id: pedidoId,
         numero: numeroPedido,
         cliente: nome,
         tel: tel,
-        end: end,
-        itens: [...carrinhoCli],
-        taxa: TAXA_ENTREGA,
+        end: enderecoFinal,
+        itens: carrinho.map(c => ({
+            id: String(c.id || ''),
+            nome: c.nome || 'Item',
+            tamanho: c.tamanho || 'M',
+            qtdCarrinho: parseInt(c.qtd) || 1,
+            totalItem: (parseFloat(c.preco) || 0) * (parseInt(c.qtd) || 1)
+        })),
+        taxa: taxa,
         total: totalGeral,
         pagamento: pagamento,
-        trocoInfo: trocoInfo,
-        status: 'pendente', // Entra como pendente para a cozinha aceitar
-        dataHora: new Date().toISOString()
+        trocoInfo: (pagamento === 'DINHEIRO' && trocoInfo) ? trocoInfo : null,
+        status: 'pendente', // Entra como pendente para aparecer na Cozinha
+        criadoEm: new Date().toISOString()
     };
 
     try {
+        console.log("Enviando pedido para o Firebase...", novoPedido);
+
         // Salva diretamente na coleção 'pedidos' do Firestore
         await db.collection('pedidos').doc(pedidoId).set(novoPedido);
         console.log("Pedido enviado com sucesso pelo cardápio! ID:", pedidoId);
         
-        alert("Pedido realizado com sucesso! Sua marmita já vai ser preparada.");
-        
-        // Limpa o carrinho e a tela do cliente
+        // Exibe o número do pedido no modal de sucesso, se existir
+        const elSucessoNum = document.getElementById('sucesso-num-pedido');
+        if (elSucessoNum) {
+            elSucessoNum.innerText = `Pedido #${numeroPedido}`;
+        }
+
+        // Fecha o modal do carrinho / checkout
+        const modalCarrinho = document.getElementById('modal-carrinho') || document.getElementById('modal-checkout');
+        if (modalCarrinho) modalCarrinho.classList.add('hidden');
+
+        // Abre o modal de sucesso, se existir
+        const modalSucesso = document.getElementById('modal-sucesso');
+        if (modalSucesso) modalSucesso.classList.remove('hidden');
+
+        // Limpa o carrinho e reseta os campos do formulário
         carrinhoCli = [];
-        if(typeof renderizarCarrinho === 'function') renderizarCarrinho();
-        
-        // Fecha o modal de checkout se houver
-        const modalCheckout = document.getElementById('modal-checkout');
-        if(modalCheckout) modalCheckout.classList.add('hidden');
+        if (nomeInput) nomeInput.value = '';
+        if (telInput) telInput.value = '';
+        if (endInput) endInput.value = '';
+        if (obsInput) obsInput.value = '';
+        if (trocoInput) trocoInput.value = '';
+        if (pagSelect) pagSelect.value = 'PIX';
+
+        if (typeof toggleFormaPagamento === 'function') {
+            toggleFormaPagamento('PIX');
+        }
+
+        if (typeof atualizarBarraCarrinho === 'function') {
+            atualizarBarraCarrinho();
+        }
+
+        if (typeof renderizarItensModal === 'function') {
+            renderizarItensModal();
+        }
 
     } catch (error) {
         console.error("Erro ao enviar pedido para o Firebase:", error);
