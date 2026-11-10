@@ -752,33 +752,33 @@
     </div>
 
     <!-- MODAL DE EDICAO DE ADICIONAL GLOBAL -->
-    <div id="modal-editar-adicional" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-3">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h3 class="font-extrabold text-xs text-slate-900 uppercase">✏️ Editar Adicional</h3>
-                <button onclick="fecharModalEditarAdicional()" class="text-slate-400 hover:text-slate-700 font-bold text-base">✕</button>
-            </div>
-            <input type="hidden" id="edit-ad-id">
-            <div class="space-y-2">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Titulo / Subcategoria *</label>
-                    <input type="text" id="edit-ad-titulo" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Nome do Adicional *</label>
-                    <input type="text" id="edit-ad-nome" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Preco (R$) *</label>
-                    <input type="number" step="0.01" id="edit-ad-preco" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
-                </div>
-            </div>
-            <div class="flex space-x-2 pt-2">
-                <button onclick="fecharModalEditarAdicional()" class="w-1/2 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Cancelar</button>
-                <button onclick="salvarEdicaoAdicionalGlobal()" class="w-1/2 bg-emerald-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-md">Salvar</button>
-            </div>
+    <!-- Modal de Edição de Adicional -->
+<div id="modal-editar-adicional" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-5 space-y-4 shadow-xl">
+        <h3 class="font-bold text-slate-800 text-sm">Editar Adicional</h3>
+        
+        <!-- ID Oculto -->
+        <input type="hidden" id="edit-ad-id">
+
+        <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase">Grupo / Título</label>
+            <input type="text" id="edit-ad-titulo" class="w-full border border-slate-300 p-2 rounded-lg text-xs">
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase">Nome do Adicional</label>
+            <input type="text" id="edit-ad-nome" class="w-full border border-slate-300 p-2 rounded-lg text-xs">
+        </div>
+        <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase">Preço (R$)</label>
+            <input type="number" step="0.01" id="edit-ad-preco" class="w-full border border-slate-300 p-2 rounded-lg text-xs">
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-2">
+            <button type="button" onclick="fecharModalEditarAdicional()" class="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">Cancelar</button>
+            <button type="button" onclick="salvarEdicaoAdicionalGlobal()" class="px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-lg">Salvar Alterações</button>
         </div>
     </div>
+</div>
 
     <div id="comanda-impressao" class="hidden"></div>
 
@@ -1070,23 +1070,39 @@
 }
 
         function abrirModalEditarAdicional(id) {
+    console.log("Tentando abrir modal para o ID:", id);
+    
     const idStr = String(id);
     const ad = bibliotecaAdicionais.find(a => String(a.id) === idStr);
-    if (!ad) return;
+    
+    if (!ad) {
+        console.error("Adicional não encontrado na memória para o ID:", idStr);
+        alert("Erro: Adicional não encontrado.");
+        return;
+    }
 
-    // Guarda o ID no campo oculto do modal
+    // Captura os elementos do DOM
     const elId = document.getElementById('edit-ad-id');
     const elTitulo = document.getElementById('edit-ad-titulo');
     const elNome = document.getElementById('edit-ad-nome');
     const elPreco = document.getElementById('edit-ad-preco');
     const elModal = document.getElementById('modal-editar-adicional');
 
+    if (!elModal) {
+        console.error("ERRO CRÍTICO: O elemento com id 'modal-editar-adicional' não existe no HTML!");
+        alert("Erro no layout: Modal de edição de adicional não encontrado na página.");
+        return;
+    }
+
+    // Preenche os campos com segurança
     if (elId) elId.value = ad.id;
     if (elTitulo) elTitulo.value = ad.titulo || '';
     if (elNome) elNome.value = ad.nome || '';
     if (elPreco) elPreco.value = Number(ad.preco || 0);
 
-    if (elModal) elModal.classList.remove('hidden');
+    // Abre o modal removendo a classe 'hidden'
+    elModal.classList.remove('hidden');
+    console.log("Modal aberto com sucesso!");
 }
 
         function fecharModalEditarAdicional() {
