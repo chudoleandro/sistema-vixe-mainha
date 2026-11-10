@@ -2029,20 +2029,49 @@
     }
 }
 
-        function recusarPedidoOnline(id) {
-            if(confirm('Deseja realmente recusar e cancelar este pedido?')) {
-                pedidos = pedidos.map(p => {
-                    if(p.id === id) {
-                        let atualizado = {...p, status: 'cancelado'};
-                        salvarNoFirebase('pedidos', atualizado.id, atualizado);
-                        return atualizado;
-                    }
-                    return p;
-                });
+        async function recusarPedidoOnline(id) {
+    if (!confirm('Deseja realmente recusar e cancelar este pedido?')) return;
+
+    if (!db) {
+        console.error("Banco de dados não inicializado!");
+        return;
+    }
+
+    const idStr = String(id);
+
+    try {
+        // 1. Atualiza o status no Firebase para 'cancelado'
+        await db.collection('pedidos').doc(idStr).update({
+            status: 'cancelado'
+        });
+        console.log("Pedido cancelado/recusado no Firebase:", idStr);
+
+        // 2. Atualiza a lista local de pedidos na memória
+        if (typeof pedidos !== 'undefined') {
+            pedidos = pedidos.map(p => {
+                if (String(p.id) === idStr) {
+                    return { ...p, status: 'cancelado' };
+                }
+                return p;
+            });
+            
+            if (typeof salvarDadosLocal === 'function') {
                 salvarDadosLocal();
-                renderizarCozinha();
             }
         }
+
+        // 3. Atualiza a tela da cozinha para o card sumir
+        if (typeof renderizarCozinha === 'function') {
+            renderizarCozinha();
+        }
+
+        console.log("Pedido recusado com sucesso!");
+
+    } catch (error) {
+        console.error("Erro ao recusar o pedido no Firebase:", error);
+        alert("Erro ao recusar o pedido. Verifique o console (F12).");
+    }
+}
 
         function mudarStatusPedido(id, status) {
             pedidos = pedidos.map(p => {
@@ -2063,43 +2092,67 @@
         }
 
         function verDetalhesPedido(id) {
-            const p = pedidos.find(i => i.id === id);
-            if(!p) return;
-            let htmlItens = '';
-            p.itens.forEach(i => {
-                htmlItens += `<li class="flex justify-between text-[11px] py-1 border-b border-slate-100"><span>${i.qtdCarrinho}x ${i.nome} (${i.tamanho})</span><span class="font-bold">R$ ${i.totalItem.toFixed(2)}</span></li>`;
-            });
-            const html = `
-                <div class="bg-red-50 p-3 rounded-xl border border-red-100 space-y-1">
-                    <p class="text-[9px] text-red-600 font-extrabold uppercase tracking-wider">Pedido #${p.numero}</p>
-                    <h4 class="text-sm font-bold text-slate-800">${p.cliente}</h4>
-                </div>
-                <div class="space-y-1 pt-1">
-                    <p><strong>📞 Telefone:</strong> ${p.tel || 'Nao informado'}</p>
-                    <p><strong>📍 Endereço:</strong> ${p.end}</p>
-                </div>
-                <div class="border-t border-slate-100 pt-2">
-                    <p class="font-bold text-[9px] uppercase text-slate-400 mb-1">Itens Solicitados:</p>
-                    <ul class="space-y-0.5">${htmlItens}</ul>
-                </div>
-                <div class="border-t border-slate-100 pt-2 space-y-1">
-                    <p><strong>Subtotal:</strong> R$ ${(p.total - p.taxa).toFixed(2)}</p>
-                    <p><strong>Taxa Entrega:</strong> R$ ${p.taxa.toFixed(2)}</p>
-                    <p class="text-sm font-extrabold text-emerald-600">Total Final: R$ ${p.total.toFixed(2)}</p>
-                    <p><strong>Pagamento:</strong> ${p.pagamento}</p>
-                </div>
-            `;
-            abrirPainel(`Ficha do Pedido #${p.numero}`, html);
-        }
+    if (!pedidos || pedidos.length === 0) return;
 
-        function abrirPainel(titulo, conteudo) {
-            document.getElementById('painel-titulo').innerText = titulo;
-            document.getElementById('painel-conteudo').innerHTML = conteudo;
-            document.getElementById('painel-detalhes').classList.remove('hidden');
-        }
+    // Converte para string para garantir a compatibilidade do ID
+    const idStr = String(id);
+    const p = pedidos.find(i => String(i.id) === idStr);
+    
+    if (!p) {
+        console.error("Pedido não encontrado para exibir detalhes:", id);
+        return;
+    }
 
-        function fecharPainel() { document.getElementById('painel-detalhes').classList.add('hidden'); }
+    let htmlItens = '';
+    if (p.itens && Array.isArray(p.itens)) {
+        p.itens.forEach(i => {
+            htmlItens += `<li class="flex justify-between text-[11px] py-1 border-b border-slate-100"><span>${i.qtdCarrinho || 1}x ${i.nome || 'Item'} (${i.tamanho || 'Único'})</span><span class="font-bold">R$ ${(i.totalItem || 0).toFixed(2)}</span></li>`;
+        });
+    }
 
+    // Calcula o subtotal com segurança (Total menos a taxa de entrega)
+    const taxaEntrega = Number(p.taxa || 0);
+    const totalGeral = Number(p.total || 0);
+    const subtotal = totalGeral - taxaEntrega;
+
+    const html = `
+        <div class="bg-red-50 p-3 rounded-xl border border-red-100 space-y-1">
+            <p class="text-[9px] text-red-600 font-extrabold uppercase tracking-wider">Pedido #${p.numero || '0'}</p>
+            <h4 class="text-sm font-bold text-slate-800">${p.cliente || 'Cliente'}</h4>
+        </div>
+        <div class="space-y-1 pt-1">
+            <p><strong>📞 Telefone:</strong> ${p.tel || 'Não informado'}</p>
+            <p><strong>📍 Endereço:</strong> ${p.end || 'Não informado'}</p>
+        </div>
+        <div class="border-t border-slate-100 pt-2">
+            <p class="font-bold text-[9px] uppercase text-slate-400 mb-1">Itens Solicitados:</p>
+            <ul class="space-y-0.5">${htmlItens}</ul>
+        </div>
+        <div class="border-t border-slate-100 pt-2 space-y-1">
+            <p><strong>Subtotal:</strong> R$ ${subtotal.toFixed(2)}</p>
+            <p><strong>Taxa Entrega:</strong> R$ ${taxaEntrega.toFixed(2)}</p>
+            <p class="text-sm font-extrabold text-emerald-600">Total Final: R$ ${totalGeral.toFixed(2)}</p>
+            <p><strong>Pagamento:</strong> ${p.pagamento || 'DINHEIRO'}</p>
+        </div>
+    `;
+
+    abrirPainel(`Ficha do Pedido #${p.numero || '0'}`, html);
+}
+
+function abrirPainel(titulo, conteudo) {
+    const elTitulo = document.getElementById('painel-titulo');
+    const elConteudo = document.getElementById('painel-conteudo');
+    const elPainel = document.getElementById('painel-detalhes');
+
+    if (elTitulo) elTitulo.innerText = titulo;
+    if (elConteudo) elConteudo.innerHTML = conteudo;
+    if (elPainel) elPainel.classList.remove('hidden');
+}
+
+function fecharPainel() { 
+    const elPainel = document.getElementById('painel-detalhes');
+    if (elPainel) elPainel.classList.add('hidden'); 
+}
         function lancarDespesa(e) {
             e.preventDefault();
             const novaDesp = {
