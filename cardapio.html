@@ -440,68 +440,91 @@
         }
 
         function abrirDetalhePrato(id) {
-            const p = cardapio.find(item => item.id === id);
-            if(!p) return;
-            pratoSelecionado = p;
-            qtdDetalhe = 1;
+    const idStr = String(id);
+    const p = cardapio.find(item => String(item.id) === idStr);
+    
+    if(!p) {
+        console.error("Prato não encontrado para exibição de detalhes, ID:", idStr);
+        return;
+    }
 
-            document.getElementById('detalhe-img').src = p.fotoUrl || 'https://via.placeholder.com/300';
-            document.getElementById('detalhe-nome').innerText = p.nome;
-            document.getElementById('detalhe-desc').innerText = p.descricao || '';
-            document.getElementById('detalhe-preco').innerText = `R$ ${p.preco.toFixed(2)}`;
-            document.getElementById('detalhe-qtd').innerText = qtdDetalhe;
-            document.getElementById('detalhe-obs').value = '';
+    window.pratoSelecionado = p;
+    window.qtdDetalhe = 1;
 
-            const boxAdicionais = document.getElementById('container-adicionais-box');
-            const listaAdicionais = document.getElementById('lista-adicionais-prato');
+    // Preenche os campos do modal de detalhes com segurança
+    const elImg = document.getElementById('detalhe-img');
+    const elNome = document.getElementById('detalhe-nome');
+    const elDesc = document.getElementById('detalhe-desc');
+    const elPreco = document.getElementById('detalhe-preco');
+    const elQtd = document.getElementById('detalhe-qtd');
+    const elObs = document.getElementById('detalhe-obs');
 
-            if (p.adicionais && p.adicionais.length > 0) {
-                boxAdicionais.classList.remove('hidden');
-                listaAdicionais.innerHTML = '';
+    if(elImg) elImg.src = p.fotoUrl || 'https://via.placeholder.com/300';
+    if(elNome) elNome.innerText = p.nome || '';
+    if(elDesc) elDesc.innerText = p.descricao || '';
+    if(elPreco) elPreco.innerText = `R$ ${Number(p.preco || 0).toFixed(2)}`;
+    if(elQtd) elQtd.innerText = window.qtdDetalhe;
+    if(elObs) elObs.value = '';
 
-                const gruposSubcategorias = {};
-                p.adicionais.forEach((ad, index) => {
-                    const nomeSubcat = ad.titulo || ad.subcategoria || 'Adicionais';
-                    if(!gruposSubcategorias[nomeSubcat]) {
-                        gruposSubcategorias[nomeSubcat] = [];
-                    }
-                    gruposSubcategorias[nomeSubcat].push({ ...ad, indexGlobal: index });
-                });
+    const boxAdicionais = document.getElementById('container-adicionais-box');
+    const listaAdicionais = document.getElementById('lista-adicionais-prato');
 
-                Object.keys(gruposSubcategorias).forEach(subcatNome => {
-                    let itensHtml = '';
-                    gruposSubcategorias[subcatNome].forEach(ad => {
-                        itensHtml += `
-                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-white border border-amber-200">
-                                <div>
-                                    <span class="text-xs font-bold text-slate-800 block">${ad.nome}</span>
-                                    <span class="text-[10px] font-extrabold text-emerald-600">+ R$ ${ad.preco.toFixed(2)}</span>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, -1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">-</button>
-                                    <span id="qtd-adicional-${ad.indexGlobal}" class="font-black text-xs text-slate-900 w-4 text-center" data-preco="${ad.preco}" data-nome="${ad.nome}">0</span>
-                                    <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, 1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">+</button>
-                                </div>
-                            </div>
-                        `;
-                    });
+    if (!boxAdicionais || !listaAdicionais) return;
 
-                    listaAdicionais.innerHTML += `
-                        <div class="space-y-1.5 pt-1">
-                            <p class="font-black text-[11px] text-red-700 uppercase tracking-wide bg-amber-200/60 px-2.5 py-1 rounded-lg">${subcatNome}</p>
-                            ${itensHtml}
-                        </div>
-                    `;
-                });
+    if (p.adicionais && p.adicionais.length > 0) {
+        boxAdicionais.classList.remove('hidden');
+        listaAdicionais.innerHTML = '';
 
-            } else {
-                boxAdicionais.classList.add('hidden');
-                listaAdicionais.innerHTML = '';
+        const gruposSubcategorias = {};
+        p.adicionais.forEach((ad, index) => {
+            const nomeSubcat = ad.titulo || ad.subcategoria || 'Adicionais';
+            if(!gruposSubcategorias[nomeSubcat]) {
+                gruposSubcategorias[nomeSubcat] = [];
             }
+            gruposSubcategorias[nomeSubcat].push({ ...ad, indexGlobal: index });
+        });
 
-            atualizarSubtotalDetalheModal();
-            document.getElementById('modal-detalhe-prato').classList.remove('hidden');
-        }
+        Object.keys(gruposSubcategorias).forEach(subcatNome => {
+            let itensHtml = '';
+            gruposSubcategorias[subcatNome].forEach(ad => {
+                const precoAd = Number(ad.preco || 0);
+                itensHtml += `
+                    <div class="flex justify-between items-center p-2.5 rounded-xl bg-white border border-amber-200">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800 block">${ad.nome || ''}</span>
+                            <span class="text-[10px] font-extrabold text-emerald-600">+ R$ ${precoAd.toFixed(2)}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, -1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">-</button>
+                            <span id="qtd-adicional-${ad.indexGlobal}" class="font-black text-xs text-slate-900 w-4 text-center" data-preco="${precoAd}" data-nome="${ad.nome || ''}">0</span>
+                            <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, 1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listaAdicionais.innerHTML += `
+                <div class="space-y-1.5 pt-1">
+                    <p class="font-black text-[11px] text-red-700 uppercase tracking-wide bg-amber-200/60 px-2.5 py-1 rounded-lg">${subcatNome}</p>
+                    ${itensHtml}
+                </div>
+            `;
+        });
+
+    } else {
+        boxAdicionais.classList.add('hidden');
+        listaAdicionais.innerHTML = '';
+    }
+
+    if (typeof atualizarSubtotalDetalheModal === 'function') {
+        atualizarSubtotalDetalheModal();
+    }
+
+    const modalDetalhe = document.getElementById('modal-detalhe-prato');
+    if (modalDetalhe) {
+        modalDetalhe.classList.remove('hidden');
+    }
+}
 
         function fecharDetalhePrato() { document.getElementById('modal-detalhe-prato').classList.add('hidden'); pratoSelecionado = null; }
         function alterarQtdDetalhe(delta) { qtdDetalhe = Math.max(1, qtdDetalhe + delta); document.getElementById('detalhe-qtd').innerText = qtdDetalhe; atualizarSubtotalDetalheModal(); }
