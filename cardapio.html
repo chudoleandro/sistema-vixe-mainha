@@ -298,19 +298,70 @@
             }
         });
 
-        async function salvarPedidoNoFirebase(pedidoObj) {
+        async function enviarPedidoParaFirebase() {
     if (!db) {
-        console.error("Banco de dados (db) não inicializado!");
+        alert("Erro de conexão com o banco de dados.");
         return;
     }
+
+    // Coleta os dados dos campos do cardápio do cliente
+    const nomeInput = document.getElementById('nome-cliente');
+    const telInput = document.getElementById('tel-cliente');
+    const endInput = document.getElementById('end-cliente');
+    const pagSelect = document.getElementById('forma-pagamento');
+    const trocoInput = document.getElementById('troco-para');
+
+    const nome = nomeInput ? nomeInput.value.trim() : '';
+    const tel = telInput ? telInput.value.trim() : '';
+    const end = endInput ? endInput.value.trim() : '';
+    const pagamento = pagSelect ? pagSelect.value : 'DINHEIRO';
+    const trocoInfo = trocoInput ? trocoInput.value : '';
+
+    if (!nome || !end || !carrinhoCli || carrinhoCli.length === 0) {
+        alert('Por favor, preencha seu nome, endereço e adicione itens ao carrinho!');
+        return;
+    }
+
+    const subtotal = carrinhoCli.reduce((acc, i) => acc + (i.totalItem || 0), 0);
+    const totalGeral = subtotal + TAXA_ENTREGA;
+    const pedidoId = String(Date.now());
     
+    // Gera um número de pedido aleatório de 3 dígitos se não houver contador
+    const numeroPedido = Math.floor(Math.random() * 900) + 100;
+
+    const novoPedido = {
+        id: pedidoId,
+        numero: numeroPedido,
+        cliente: nome,
+        tel: tel,
+        end: end,
+        itens: [...carrinhoCli],
+        taxa: TAXA_ENTREGA,
+        total: totalGeral,
+        pagamento: pagamento,
+        trocoInfo: trocoInfo,
+        status: 'pendente', // Entra como pendente para a cozinha aceitar
+        dataHora: new Date().toISOString()
+    };
+
     try {
-        // Usa a sintaxe correta do Firebase Compat v11
-        await db.collection('pedidos').doc(String(pedidoObj.id)).set(pedidoObj);
-        console.log("Pedido salvo com sucesso no Firebase!", pedidoObj.id);
-    } catch(e) {
-        console.error("Erro ao enviar pedido para o Firebase:", e);
-        alert("Erro ao enviar pedido. Verifique sua conexão.");
+        // Salva diretamente na coleção 'pedidos' do Firestore
+        await db.collection('pedidos').doc(pedidoId).set(novoPedido);
+        console.log("Pedido enviado com sucesso pelo cardápio! ID:", pedidoId);
+        
+        alert("Pedido realizado com sucesso! Sua marmita já vai ser preparada.");
+        
+        // Limpa o carrinho e a tela do cliente
+        carrinhoCli = [];
+        if(typeof renderizarCarrinho === 'function') renderizarCarrinho();
+        
+        // Fecha o modal de checkout se houver
+        const modalCheckout = document.getElementById('modal-checkout');
+        if(modalCheckout) modalCheckout.classList.add('hidden');
+
+    } catch (error) {
+        console.error("Erro ao enviar pedido para o Firebase:", error);
+        alert("Erro ao enviar pedido. Verifique sua conexão e tente novamente.");
     }
 }
 
