@@ -445,13 +445,15 @@
     
     if(!p) {
         console.error("Prato não encontrado para exibição de detalhes, ID:", idStr);
+        alert("Erro ao abrir o prato. Tente novamente.");
         return;
     }
 
+    // Salva globalmente na janela para garantir que a função de confirmar enxergue
     window.pratoSelecionado = p;
     window.qtdDetalhe = 1;
 
-    // Preenche os campos do modal de detalhes com segurança
+    // Preenche os campos do modal
     const elImg = document.getElementById('detalhe-img');
     const elNome = document.getElementById('detalhe-nome');
     const elDesc = document.getElementById('detalhe-desc');
@@ -466,54 +468,54 @@
     if(elQtd) elQtd.innerText = window.qtdDetalhe;
     if(elObs) elObs.value = '';
 
+    // Renderiza os adicionais (se houver)
     const boxAdicionais = document.getElementById('container-adicionais-box');
     const listaAdicionais = document.getElementById('lista-adicionais-prato');
 
-    if (!boxAdicionais || !listaAdicionais) return;
+    if (boxAdicionais && listaAdicionais) {
+        if (p.adicionais && p.adicionais.length > 0) {
+            boxAdicionais.classList.remove('hidden');
+            listaAdicionais.innerHTML = '';
 
-    if (p.adicionais && p.adicionais.length > 0) {
-        boxAdicionais.classList.remove('hidden');
-        listaAdicionais.innerHTML = '';
+            const gruposSubcategorias = {};
+            p.adicionais.forEach((ad, index) => {
+                const nomeSubcat = ad.titulo || ad.subcategoria || 'Adicionais';
+                if(!gruposSubcategorias[nomeSubcat]) {
+                    gruposSubcategorias[nomeSubcat] = [];
+                }
+                gruposSubcategorias[nomeSubcat].push({ ...ad, indexGlobal: index });
+            });
 
-        const gruposSubcategorias = {};
-        p.adicionais.forEach((ad, index) => {
-            const nomeSubcat = ad.titulo || ad.subcategoria || 'Adicionais';
-            if(!gruposSubcategorias[nomeSubcat]) {
-                gruposSubcategorias[nomeSubcat] = [];
-            }
-            gruposSubcategorias[nomeSubcat].push({ ...ad, indexGlobal: index });
-        });
-
-        Object.keys(gruposSubcategorias).forEach(subcatNome => {
-            let itensHtml = '';
-            gruposSubcategorias[subcatNome].forEach(ad => {
-                const precoAd = Number(ad.preco || 0);
-                itensHtml += `
-                    <div class="flex justify-between items-center p-2.5 rounded-xl bg-white border border-amber-200">
-                        <div>
-                            <span class="text-xs font-bold text-slate-800 block">${ad.nome || ''}</span>
-                            <span class="text-[10px] font-extrabold text-emerald-600">+ R$ ${precoAd.toFixed(2)}</span>
+            Object.keys(gruposSubcategorias).forEach(subcatNome => {
+                let itensHtml = '';
+                gruposSubcategorias[subcatNome].forEach(ad => {
+                    const precoAd = Number(ad.preco || 0);
+                    itensHtml += `
+                        <div class="flex justify-between items-center p-2.5 rounded-xl bg-white border border-amber-200">
+                            <div>
+                                <span class="text-xs font-bold text-slate-800 block">${ad.nome || ''}</span>
+                                <span class="text-[10px] font-extrabold text-emerald-600">+ R$ ${precoAd.toFixed(2)}</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, -1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">-</button>
+                                <span id="qtd-adicional-${ad.indexGlobal}" class="font-black text-xs text-slate-900 w-4 text-center" data-preco="${precoAd}" data-nome="${ad.nome || ''}">0</span>
+                                <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, 1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">+</button>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, -1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">-</button>
-                            <span id="qtd-adicional-${ad.indexGlobal}" class="font-black text-xs text-slate-900 w-4 text-center" data-preco="${precoAd}" data-nome="${ad.nome || ''}">0</span>
-                            <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, 1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">+</button>
-                        </div>
+                    `;
+                });
+
+                listaAdicionais.innerHTML += `
+                    <div class="space-y-1.5 pt-1">
+                        <p class="font-black text-[11px] text-red-700 uppercase tracking-wide bg-amber-200/60 px-2.5 py-1 rounded-lg">${subcatNome}</p>
+                        ${itensHtml}
                     </div>
                 `;
             });
-
-            listaAdicionais.innerHTML += `
-                <div class="space-y-1.5 pt-1">
-                    <p class="font-black text-[11px] text-red-700 uppercase tracking-wide bg-amber-200/60 px-2.5 py-1 rounded-lg">${subcatNome}</p>
-                    ${itensHtml}
-                </div>
-            `;
-        });
-
-    } else {
-        boxAdicionais.classList.add('hidden');
-        listaAdicionais.innerHTML = '';
+        } else {
+            boxAdicionais.classList.add('hidden');
+            listaAdicionais.innerHTML = '';
+        }
     }
 
     if (typeof atualizarSubtotalDetalheModal === 'function') {
@@ -560,14 +562,13 @@
 }
 
         function confirmarAdicionarPrato() {
-    console.log("=== INICIO: confirmarAdicionarPrato ===");
-    
-    if (!pratoSelecionado) {
-        console.error("Erro: Nenhum prato selecionado!");
-        alert("Erro: Nenhum prato selecionado.");
+    // Garante que o pratoSelecionado existe (busca na janela global)
+    const pratoAtual = window.pratoSelecionado || pratoSelecionado;
+
+    if (!pratoAtual) {
+        alert("Erro: Nenhum prato selecionado. Por favor, feche e clique no prato novamente.");
         return;
     }
-    console.log("Prato selecionado:", pratoSelecionado.nome);
 
     const talherInput = document.querySelector('input[name="talher-opt"]:checked');
     const talheres = talherInput ? talherInput.value : 'NÃO';
@@ -594,13 +595,12 @@
     if (obsPrato) desc.push(`Obs: ${obsPrato}`);
 
     const obsFinal = desc.length > 0 ? `(${desc.join(' | ')})` : '';
-    const precoBase = Number(pratoSelecionado.preco || 0);
+    const precoBase = Number(pratoAtual.preco || 0);
     const precoFinal = precoBase + somaAd;
     const qtdDesejada = typeof qtdDetalhe !== 'undefined' ? parseInt(qtdDetalhe) || 1 : 1;
     
-    const idPratoStr = String(pratoSelecionado.id);
+    const idPratoStr = String(pratoAtual.id);
 
-    // Garante que carrinhoCli é um array
     if (!Array.isArray(window.carrinhoCli)) {
         window.carrinhoCli = [];
     }
@@ -610,24 +610,20 @@
 
     if (existente) {
         existente.qtd += qtdDesejada;
-        console.log("Quantidade atualizada para o item existente no carrinho.");
     } else {
         carrinhoCli.push({
-            ...pratoSelecionado,
+            ...pratoAtual,
             id: idPratoStr,
             preco: precoFinal,
-            nome: obsFinal ? `${pratoSelecionado.nome} ${obsFinal}` : pratoSelecionado.nome,
+            nome: obsFinal ? `${pratoAtual.nome} ${obsFinal}` : pratoAtual.nome,
             qtd: qtdDesejada,
             obsItem: obsFinal
         });
-        console.log("Novo item adicionado ao carrinho.");
     }
 
-    // Atualiza a interface do carrinho
+    // Atualiza a barra do carrinho
     if (typeof atualizarBarraCarrinho === 'function') {
         atualizarBarraCarrinho();
-    } else {
-        console.warn("Função atualizarBarraCarrinho não encontrada.");
     }
     
     // Fecha o modal de detalhes
@@ -638,7 +634,9 @@
         if (modal) modal.classList.add('hidden');
     }
 
-    console.log("=== FIM: Item adicionado com sucesso! ===");
+    // Reseta o prato selecionado
+    window.pratoSelecionado = null;
+    console.log("Item adicionado ao carrinho com sucesso!");
 }
 
         function atualizarBarraCarrinho() {
