@@ -1617,53 +1617,73 @@
         }
 
         function abrirModalEditar(id) {
-            const item = cardapio.find(i => i.id === id);
-            if(!item) return;
+    const idStr = String(id);
+    const item = cardapio.find(i => String(i.id) === idStr);
+    
+    if(!item) {
+        console.error("Item do cardápio não encontrado para edição, ID:", idStr);
+        return;
+    }
 
-            document.getElementById('edit-id').value = item.id;
-            document.getElementById('edit-nome').value = item.nome;
-            document.getElementById('edit-categoria').value = item.categoria;
-            document.getElementById('edit-tamanho').value = item.tamanho;
-            document.getElementById('edit-preco').value = item.preco;
+    // Preenche os campos principais com segurança
+    const elId = document.getElementById('edit-id');
+    const elNome = document.getElementById('edit-nome');
+    const elCategoria = document.getElementById('edit-categoria');
+    const elTamanho = document.getElementById('edit-tamanho');
+    const elPreco = document.getElementById('edit-preco');
 
-            const containerEdit = document.getElementById('edit-container-checkbox-adicionais');
-            containerEdit.innerHTML = '';
+    if(elId) elId.value = item.id;
+    if(elNome) elNome.value = item.nome || '';
+    if(elCategoria) elCategoria.value = item.categoria || '';
+    if(elTamanho) elTamanho.value = item.tamanho || '';
+    if(elPreco) elPreco.value = Number(item.preco || 0);
 
-            const idsVinculados = item.adicionais ? item.adicionais.map(a => a.id) : [];
+    const containerEdit = document.getElementById('edit-container-checkbox-adicionais');
+    if(!containerEdit) return;
+    
+    containerEdit.innerHTML = '';
 
-            if(bibliotecaAdicionais.length === 0) {
-                containerEdit.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum adicional na biblioteca.</p>';
-            } else {
-                const grupos = {};
-                bibliotecaAdicionais.forEach(ad => {
-                    const grupoTitulo = ad.titulo || 'Adicionais';
-                    if(!grupos[grupoTitulo]) grupos[grupoTitulo] = [];
-                    grupos[grupoTitulo].push(ad);
-                });
+    // Mapeia os IDs vinculados convertendo para string para garantir a comparação exata
+    const idsVinculados = item.adicionais ? item.adicionais.map(a => String(a.id)) : [];
 
-                Object.keys(grupos).forEach(tituloGrupo => {
-                    let itensHtml = '';
-                    grupos[tituloGrupo].forEach(ad => {
-                        const marcado = idsVinculados.includes(ad.id) ? 'checked' : '';
-                        itensHtml += `
-                            <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer">
-                                <input type="checkbox" value="${ad.id}" ${marcado} class="check-adicional-edit rounded text-blue-600 w-3.5 h-3.5">
-                                <span class="text-[11px] font-bold text-slate-800">${ad.nome} (+R$ ${ad.preco.toFixed(2)})</span>
-                            </label>
-                        `;
-                    });
+    if(!bibliotecaAdicionais || bibliotecaAdicionais.length === 0) {
+        containerEdit.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum adicional na biblioteca.</p>';
+    } else {
+        const grupos = {};
+        bibliotecaAdicionais.forEach(ad => {
+            const grupoTitulo = ad.titulo || 'Adicionais';
+            if(!grupos[grupoTitulo]) grupos[grupoTitulo] = [];
+            grupos[grupoTitulo].push(ad);
+        });
 
-                    containerEdit.innerHTML += `
-                        <div class="space-y-1">
-                            <p class="font-extrabold text-[10px] text-amber-900 uppercase bg-amber-100 px-2 py-0.5 rounded">${tituloGrupo}</p>
-                            <div class="grid grid-cols-2 gap-2">${itensHtml}</div>
-                        </div>
-                    `;
-                });
-            }
+        Object.keys(grupos).forEach(tituloGrupo => {
+            let itensHtml = '';
+            grupos[tituloGrupo].forEach(ad => {
+                const marcado = idsVinculados.includes(String(ad.id)) ? 'checked' : '';
+                const precoAd = Number(ad.preco || 0);
+                
+                itensHtml += `
+                    <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                        <input type="checkbox" value="${ad.id}" ${marcado} class="check-adicional-edit rounded text-blue-600 w-3.5 h-3.5">
+                        <span class="text-[11px] font-bold text-slate-800">${ad.nome} (+R$ ${precoAd.toFixed(2)})</span>
+                    </label>
+                `;
+            });
 
-            document.getElementById('modal-editar').classList.remove('hidden');
-        }
+            containerEdit.innerHTML += `
+                <div class="space-y-1">
+                    <p class="font-extrabold text-[10px] text-amber-900 uppercase bg-amber-100 px-2 py-0.5 rounded">${tituloGrupo}</p>
+                    <div class="grid grid-cols-2 gap-2">${itensHtml}</div>
+                </div>
+            `;
+        });
+    }
+
+    const modal = document.getElementById('modal-editar');
+    if(modal) {
+        modal.classList.remove('hidden');
+    }
+}
 
         function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); }
 
