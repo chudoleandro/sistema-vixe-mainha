@@ -536,164 +536,368 @@
             atualizarSubtotalDetalheModal();
         }
         function atualizarSubtotalDetalheModal() {
-            if(!pratoSelecionado) return;
-            let precoUnit = pratoSelecionado.preco;
-            document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
-                precoUnit += (parseInt(span.innerText) || 0) * (parseFloat(span.getAttribute('data-preco')) || 0);
-            });
-            document.getElementById('btn-total-item-modal').innerText = `R$ ${(precoUnit * qtdDetalhe).toFixed(2)}`;
-        }
+    if (!pratoSelecionado) return;
+
+    // Garante que a quantidade e o preço base sejam numéricos
+    let qtdItem = typeof qtdDetalhe !== 'undefined' ? parseInt(qtdDetalhe) || 1 : 1;
+    let precoUnit = Number(pratoSelecionado.preco || 0);
+
+    // Soma o valor dos adicionais selecionados à unidade
+    document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
+        const qtdAd = parseInt(span.innerText) || 0;
+        const precoAd = parseFloat(span.getAttribute('data-preco')) || 0;
+        precoUnit += qtdAd * precoAd;
+    });
+
+    // Calcula o total geral (Preço Unitário com adicionais * Quantidade do Prato)
+    const totalGeral = precoUnit * qtdItem;
+
+    // Atualiza o texto do botão no modal com segurança
+    const btnTotal = document.getElementById('btn-total-item-modal');
+    if (btnTotal) {
+        btnTotal.innerText = `R$ ${totalGeral.toFixed(2)}`;
+    }
+}
 
         function confirmarAdicionarPrato() {
-            if(!pratoSelecionado) return;
-            const talheres = document.querySelector('input[name="talher-opt"]:checked')?.value || 'NÃO';
-            const obsPrato = document.getElementById('detalhe-obs').value.trim();
-            let adicionais = [], somaAd = 0;
+    if (!pratoSelecionado) return;
 
-            document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
-                const qtd = parseInt(span.innerText) || 0;
-                if(qtd > 0) {
-                    adicionais.push(`${qtd}x ${span.getAttribute('data-nome')}`);
-                    somaAd += qtd * (parseFloat(span.getAttribute('data-preco')) || 0);
-                }
-            });
+    const talherInput = document.querySelector('input[name="talher-opt"]:checked');
+    const talheres = talherInput ? talherInput.value : 'NÃO';
+    
+    const obsPratoInput = document.getElementById('detalhe-obs');
+    const obsPrato = obsPratoInput ? obsPratoInput.value.trim() : '';
 
-            let desc = [];
-            if(adicionais.length > 0) desc.push(`Adicionais: ${adicionais.join(', ')}`);
-            if(talheres === 'SIM') desc.push('Com Talher');
-            if(obsPrato) desc.push(`Obs: ${obsPrato}`);
+    let adicionais = [];
+    let somaAd = 0;
 
-            const obsFinal = desc.length > 0 ? `(${desc.join(' | ')})` : '';
-            const precoFinal = pratoSelecionado.preco + somaAd;
-
-            const existente = carrinhoCli.find(c => c.id === pratoSelecionado.id && c.obsItem === obsFinal);
-            if(existente) { existente.qtd += qtdDetalhe; } else {
-                carrinhoCli.push({ ...pratoSelecionado, preco: precoFinal, nome: obsFinal ? `${pratoSelecionado.nome} ${obsFinal}` : pratoSelecionado.nome, qtd: qtdDetalhe, obsItem: obsFinal });
-            }
-            atualizarBarraCarrinho();
-            fecharDetalhePrato();
+    document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
+        const qtd = parseInt(span.innerText) || 0;
+        if (qtd > 0) {
+            const nomeAd = span.getAttribute('data-nome') || 'Adicional';
+            const precoAd = parseFloat(span.getAttribute('data-preco')) || 0;
+            adicionais.push(`${qtd}x ${nomeAd}`);
+            somaAd += qtd * precoAd;
         }
+    });
+
+    let desc = [];
+    if (adicionais.length > 0) desc.push(`Adicionais: ${adicionais.join(', ')}`);
+    if (talheres === 'SIM') desc.push('Com Talher');
+    if (obsPrato) desc.push(`Obs: ${obsPrato}`);
+
+    const obsFinal = desc.length > 0 ? `(${desc.join(' | ')})` : '';
+    const precoBase = Number(pratoSelecionado.preco || 0);
+    const precoFinal = precoBase + somaAd;
+    const qtdDesejada = typeof qtdDetalhe !== 'undefined' ? parseInt(qtdDetalhe) || 1 : 1;
+    
+    const idPratoStr = String(pratoSelecionado.id);
+
+    // Verifica se já existe um item idêntico (mesmo ID em string e mesma observação/adicionais) no carrinho
+    const existente = carrinhoCli.find(c => String(c.id) === idPratoStr && c.obsItem === obsFinal);
+
+    if (existente) {
+        existente.qtd += qtdDesejada;
+    } else {
+        carrinhoCli.push({
+            ...pratoSelecionado,
+            id: idPratoStr, // Garante ID como string
+            preco: precoFinal,
+            nome: obsFinal ? `${pratoSelecionado.nome} ${obsFinal}` : pratoSelecionado.nome,
+            qtd: qtdDesejada,
+            obsItem: obsFinal
+        });
+    }
+
+    // Atualiza a interface do carrinho e fecha o modal
+    if (typeof atualizarBarraCarrinho === 'function') {
+        atualizarBarraCarrinho();
+    }
+    
+    if (typeof fecharDetalhePrato === 'function') {
+        fecharDetalhePrato();
+    } else {
+        const modal = document.getElementById('modal-detalhe-prato');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    console.log("Item adicionado ao carrinho com sucesso!");
+}
 
         function atualizarBarraCarrinho() {
-            const qtd = carrinhoCli.reduce((a, b) => a + b.qtd, 0);
-            const sub = carrinhoCli.reduce((a, b) => a + (b.preco * b.qtd), 0);
-            document.getElementById('cart-qtd-txt').innerText = `${qtd} item(ns)`;
-            document.getElementById('cart-total-txt').innerText = `R$ ${(sub + TAXA_ENTREGA).toFixed(2)}`;
-            const barra = document.getElementById('barra-carrinho');
-            if(qtd > 0) barra.classList.remove('hidden'); else barra.classList.add('hidden');
+    // Garante que carrinhoCli seja um array válido
+    const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
+
+    const qtd = carrinho.reduce((a, b) => a + (parseInt(b.qtd) || 0), 0);
+    const sub = carrinho.reduce((a, b) => a + ((parseFloat(b.preco) || 0) * (parseInt(b.qtd) || 0)), 0);
+    
+    // Taxa de entrega padrão (garante que exista ou seja 0)
+    const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
+    const totalGeral = sub + taxa;
+
+    // Atualiza o texto de quantidade com segurança
+    const txtQtd = document.getElementById('cart-qtd-txt');
+    if (txtQtd) {
+        txtQtd.innerText = `${qtd} item(ns)`;
+    }
+
+    // Atualiza o texto de total com segurança
+    const txtTotal = document.getElementById('cart-total-txt');
+    if (txtTotal) {
+        txtTotal.innerText = `R$ ${totalGeral.toFixed(2)}`;
+    }
+
+    // Exibe ou oculta a barra do carrinho com segurança
+    const barra = document.getElementById('barra-carrinho');
+    if (barra) {
+        if (qtd > 0) {
+            barra.classList.remove('hidden');
+        } else {
+            barra.classList.add('hidden');
         }
+    }
+}
 
         function abrirModalCarrinho() {
-            renderizarItensModal();
-            document.getElementById('modal-carrinho').classList.remove('hidden');
-        }
+    // Atualiza a lista de itens dentro do modal antes de exibi-lo
+    if (typeof renderizarItensModal === 'function') {
+        renderizarItensModal();
+    } else {
+        console.warn("A função renderizarItensModal não foi encontrada.");
+    }
+
+    // Exibe o modal do carrinho com segurança
+    const modalCarrinho = document.getElementById('modal-carrinho');
+    if (modalCarrinho) {
+        modalCarrinho.classList.remove('hidden');
+    } else {
+        console.error("ERRO: O elemento com id 'modal-carrinho' não foi encontrado no HTML.");
+    }
+}
 
         function renderizarItensModal() {
-            const box = document.getElementById('carrinho-itens-lista');
-            box.innerHTML = '';
-            let sub = 0;
-            carrinhoCli.forEach((c, idx) => {
-                sub += c.preco * c.qtd;
-                box.innerHTML += `
-                    <div class="flex justify-between items-center py-2 text-xs">
-                        <div><p class="font-bold">${c.nome}</p><p class="text-slate-400">R$ ${c.preco.toFixed(2)}</p></div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="carrinhoCli[${idx}].qtd--; if(carrinhoCli[${idx}].qtd<=0)carrinhoCli.splice(${idx},1); atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 rounded font-bold">-</button>
-                            <span class="font-bold">${c.qtd}</span>
-                            <button onclick="carrinhoCli[${idx}].qtd++; atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 rounded font-bold">+</button>
-                            <span class="font-black ml-2">R$ ${(c.preco*c.qtd).toFixed(2)}</span>
-                        </div>
+    const box = document.getElementById('carrinho-itens-lista');
+    if (!box) {
+        console.warn("Elemento 'carrinho-itens-lista' não encontrado no DOM.");
+        return;
+    }
+
+    box.innerHTML = '';
+    let sub = 0;
+
+    // Garante que carrinhoCli seja um array válido
+    const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
+
+    if (carrinho.length === 0) {
+        box.innerHTML = '<p class="text-center text-slate-400 text-xs py-4 italic">Seu carrinho está vazio.</p>';
+    } else {
+        carrinho.forEach((c, idx) => {
+            const precoItem = Number(c.preco || 0);
+            const qtdItem = parseInt(c.qtd || 0);
+            const totalItem = precoItem * qtdItem;
+            
+            sub += totalItem;
+
+            box.innerHTML += `
+                <div class="flex justify-between items-center py-2 text-xs border-b border-slate-100 last:border-none">
+                    <div>
+                        <p class="font-bold text-slate-800">${c.nome || 'Item'}</p>
+                        <p class="text-slate-400">R$ ${precoItem.toFixed(2)}</p>
                     </div>
-                `;
-            });
-            document.getElementById('txt-subtotal').innerText = `R$ ${sub.toFixed(2)}`;
-            document.getElementById('txt-total-final').innerText = `R$ ${(sub + TAXA_ENTREGA).toFixed(2)}`;
-        }
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="carrinhoCli[${idx}].qtd--; if(carrinhoCli[${idx}].qtd<=0) carrinhoCli.splice(${idx},1); atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 text-amber-900 border border-amber-200 rounded font-bold flex items-center justify-center">-</button>
+                        <span class="font-bold w-4 text-center">${qtdItem}</span>
+                        <button type="button" onclick="carrinhoCli[${idx}].qtd++; atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 text-amber-900 border border-amber-200 rounded font-bold flex items-center justify-center">+</button>
+                        <span class="font-black ml-2 text-slate-900">R$ ${totalItem.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Taxa de entrega padrão
+    const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
+    const totalGeral = sub + taxa;
+
+    // Atualiza os textos de subtotal e total final com segurança
+    const txtSub = document.getElementById('txt-subtotal');
+    if (txtSub) {
+        txtSub.innerText = `R$ ${sub.toFixed(2)}`;
+    }
+
+    const txtTotal = document.getElementById('txt-total-final');
+    if (txtTotal) {
+        txtTotal.innerText = `R$ ${totalGeral.toFixed(2)}`;
+    }
+}
 
         function cancelarCompraCompleta() {
-            if(confirm('Tem certeza que deseja cancelar e esvaziar o seu carrinho?')) {
-                carrinhoCli = [];
-                document.getElementById('cli-nome').value = '';
-                document.getElementById('cli-tel').value = '';
-                document.getElementById('cli-end').value = '';
-                document.getElementById('cli-obs').value = '';
-                document.getElementById('cli-troco').value = '';
-                document.getElementById('cli-pagamento').value = 'PIX';
-                toggleFormaPagamento('PIX');
-                
-                atualizarBarraCarrinho();
-                fecharModalCarrinho();
-            }
+    if (!confirm('Tem certeza que deseja cancelar e esvaziar o seu carrinho?')) return;
+
+    // Esvazia o carrinho do cliente
+    carrinhoCli = [];
+
+    // Limpa os campos do formulário de checkout com segurança
+    const elNome = document.getElementById('cli-nome');
+    const elTel = document.getElementById('cli-tel');
+    const elEnd = document.getElementById('cli-end');
+    const elObs = document.getElementById('cli-obs');
+    const elTroco = document.getElementById('cli-troco');
+    const elPagamento = document.getElementById('cli-pagamento');
+
+    if (elNome) elNome.value = '';
+    if (elTel) elTel.value = '';
+    if (elEnd) elEnd.value = '';
+    if (elObs) elObs.value = '';
+    if (elTroco) elTroco.value = '';
+    
+    if (elPagamento) {
+        elPagamento.value = 'PIX';
+    }
+
+    // Reseta a exibição da forma de pagamento, se a função existir
+    if (typeof toggleFormaPagamento === 'function') {
+        toggleFormaPagamento('PIX');
+    }
+
+    // Atualiza a interface do carrinho
+    if (typeof atualizarBarraCarrinho === 'function') {
+        atualizarBarraCarrinho();
+    }
+
+    // Fecha o modal do carrinho
+    if (typeof fecharModalCarrinho === 'function') {
+        fecharModalCarrinho();
+    } else {
+        const modalCarrinho = document.getElementById('modal-carrinho');
+        if (modalCarrinho) {
+            modalCarrinho.classList.add('hidden');
         }
+    }
+
+    console.log("Compra cancelada e carrinho esvaziado com sucesso.");
+}
 
         function fecharModalCarrinho() { document.getElementById('modal-carrinho').classList.add('hidden'); }
         
         // CONTROLA EXIBIÇÃO DE PIX E TROCO CONFORME OPÇÃO SELECIONADA
-        function toggleFormaPagamento(val) { 
-            const boxTroco = document.getElementById('box-troco-cli'); 
-            const boxPix = document.getElementById('box-pix-cli');
+        function toggleFormaPagamento(val) {
+    const boxTroco = document.getElementById('box-troco-cli');
+    const boxPix = document.getElementById('box-pix-cli');
 
-            if(val === 'DINHEIRO') {
-                boxTroco.classList.remove('hidden');
-                boxPix.classList.add('hidden');
-            } else if(val === 'PIX') {
-                boxPix.classList.remove('hidden');
-                boxTroco.classList.add('hidden');
-            } else {
-                boxTroco.classList.add('hidden');
-                boxPix.classList.add('hidden');
-            }
-        }
+    if (val === 'DINHEIRO') {
+        if (boxTroco) boxTroco.classList.remove('hidden');
+        if (boxPix) boxPix.classList.add('hidden');
+    } else if (val === 'PIX') {
+        if (boxPix) boxPix.classList.remove('hidden');
+        if (boxTroco) boxTroco.classList.add('hidden');
+    } else {
+        if (boxTroco) boxTroco.classList.add('hidden');
+        if (boxPix) boxPix.classList.add('hidden');
+    }
+}
 
         async function enviarPedidoDireto() {
-            const nome = document.getElementById('cli-nome').value;
-            const tel = document.getElementById('cli-tel').value;
-            const end = document.getElementById('cli-end').value;
-            const obs = document.getElementById('cli-obs').value;
-            const pagamento = document.getElementById('cli-pagamento').value;
-            const troco = document.getElementById('cli-troco').value;
+    const elNome = document.getElementById('cli-nome');
+    const elTel = document.getElementById('cli-tel');
+    const elEnd = document.getElementById('cli-end');
+    const elObs = document.getElementById('cli-obs');
+    const elPagamento = document.getElementById('cli-pagamento');
+    const elTroco = document.getElementById('cli-troco');
 
-            if(!nome || !tel || !end || carrinhoCli.length === 0) return alert('Preencha nome, telefone e endereço!');
+    const nome = elNome ? elNome.value.trim() : '';
+    const tel = elTel ? elTel.value.trim() : '';
+    const end = elEnd ? elEnd.value.trim() : '';
+    const obs = elObs ? elObs.value.trim() : '';
+    const pagamento = elPagamento ? elPagamento.value : 'PIX';
+    const troco = elTroco ? elTroco.value.trim() : '';
 
-            const sub = carrinhoCli.reduce((a, b) => a + (b.preco * b.qtd), 0);
-            const total = sub + TAXA_ENTREGA;
-            const numPedido = Math.floor(Math.random() * 900) + 101;
+    const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
 
-            const novoPedido = {
-                id: Date.now(),
-                numero: numPedido,
-                cliente: nome,
-                tel,
-                end: obs ? `${end} (Obs: ${obs})` : end,
-                itens: carrinhoCli.map(c => ({ nome: c.nome, tamanho: c.tamanho || 'M', qtdCarrinho: c.qtd, totalItem: c.preco * c.qtd })),
-                taxa: TAXA_ENTREGA,
-                total,
-                pagamento,
-                trocoInfo: (pagamento === 'DINHEIRO' && troco) ? troco : null,
-                status: 'pendente'
-            };
+    if (!nome || !tel || !end || carrinho.length === 0) {
+        alert('Por favor, preencha nome, telefone, endereço e adicione pelo menos um item ao carrinho!');
+        return;
+    }
 
+    const sub = carrinho.reduce((a, b) => a + ((parseFloat(b.preco) || 0) * (parseInt(b.qtd) || 0)), 0);
+    const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
+    const total = sub + taxa;
+    const numPedido = Math.floor(Math.random() * 900) + 101;
+
+    const novoPedido = {
+        id: String(Date.now()), // ID como string padronizado
+        numero: numPedido,
+        cliente: nome,
+        tel: tel,
+        end: obs ? `${end} (Obs: ${obs})` : end,
+        itens: carrinho.map(c => ({
+            id: String(c.id || ''),
+            nome: c.nome || 'Item',
+            tamanho: c.tamanho || 'M',
+            qtdCarrinho: parseInt(c.qtd) || 1,
+            totalItem: (parseFloat(c.preco) || 0) * (parseInt(c.qtd) || 1)
+        })),
+        taxa: taxa,
+        total: total,
+        pagamento: pagamento,
+        trocoInfo: (pagamento === 'DINHEIRO' && troco) ? troco : null,
+        status: 'pendente',
+        criadoEm: new Date().toISOString()
+    };
+
+    try {
+        // Salva no Firebase de forma assíncrona
+        if (typeof salvarPedidoNoFirebase === 'function') {
             await salvarPedidoNoFirebase(novoPedido);
+        }
 
-            let pedidosLocais = JSON.parse(localStorage.getItem('mp_pedidos')) || [];
-            pedidosLocais.push(novoPedido);
-            localStorage.setItem('mp_pedidos', JSON.stringify(pedidosLocais));
+        // Salva no localStorage local
+        let pedidosLocais = JSON.parse(localStorage.getItem('mp_pedidos')) || [];
+        pedidosLocais.push(novoPedido);
+        localStorage.setItem('mp_pedidos', JSON.stringify(pedidosLocais));
 
-            document.getElementById('sucesso-num-pedido').innerText = `Pedido #${numPedido}`;
+        // Exibe o número do pedido no modal de sucesso
+        const elSucessoNum = document.getElementById('sucesso-num-pedido');
+        if (elSucessoNum) {
+            elSucessoNum.innerText = `Pedido #${numPedido}`;
+        }
+
+        // Fecha o carrinho e abre o modal de sucesso
+        if (typeof fecharModalCarrinho === 'function') {
             fecharModalCarrinho();
-            document.getElementById('modal-sucesso').classList.remove('hidden');
+        } else {
+            const modalCarrinho = document.getElementById('modal-carrinho');
+            if (modalCarrinho) modalCarrinho.classList.add('hidden');
+        }
 
-            carrinhoCli = [];
-            document.getElementById('cli-nome').value = '';
-            document.getElementById('cli-tel').value = '';
-            document.getElementById('cli-end').value = '';
-            document.getElementById('cli-obs').value = '';
-            document.getElementById('cli-troco').value = '';
-            document.getElementById('cli-pagamento').value = 'PIX';
+        const modalSucesso = document.getElementById('modal-sucesso');
+        if (modalSucesso) {
+            modalSucesso.classList.remove('hidden');
+        }
+
+        // Limpa o carrinho e reseta o formulário
+        carrinhoCli = [];
+        if (elNome) elNome.value = '';
+        if (elTel) elTel.value = '';
+        if (elEnd) elEnd.value = '';
+        if (elObs) elObs.value = '';
+        if (elTroco) elTroco.value = '';
+        if (elPagamento) elPagamento.value = 'PIX';
+        
+        if (typeof toggleFormaPagamento === 'function') {
             toggleFormaPagamento('PIX');
-            
+        }
+
+        if (typeof atualizarBarraCarrinho === 'function') {
             atualizarBarraCarrinho();
         }
+
+        console.log(`Pedido #${numPedido} enviado com sucesso!`);
+    } catch (error) {
+        console.error("Erro ao enviar pedido:", error);
+        alert("Ocorreu um erro ao enviar o seu pedido. Por favor, tente novamente.");
+    }
+}
 
         function fecharSucesso() { document.getElementById('modal-sucesso').classList.add('hidden'); }
     </script>
