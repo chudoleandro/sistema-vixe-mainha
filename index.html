@@ -1964,132 +1964,163 @@ function imprimirComanda(pedido) {
     }
 }
         function renderizarCozinha(dataFiltroCustom = null) {
-            const colunas = ['pendente', 'preparacao', 'entrega', 'finalizado'];
-            const hojeStr = obterDataAtualStr();
-            const dataAlvo = dataFiltroCustom || hojeStr;
+    const colunas = ['pendente', 'preparacao', 'entrega', 'finalizado'];
+    const hojeStr = obterDataAtualStr();
+    const dataAlvo = dataFiltroCustom || hojeStr;
 
-            if(dataFiltroCustom) {
-                document.getElementById('titulo-cozinha-status').innerText = `Exibindo Comandas do dia: ${dataFiltroCustom}`;
-            } else {
-                document.getElementById('titulo-cozinha-status').innerText = `Exibindo Comandas de Hoje (${hojeStr})`;
-            }
+    const tituloEl = document.getElementById('titulo-cozinha-status');
+    if (tituloEl) {
+        if(dataFiltroCustom) {
+            tituloEl.innerText = `Exibindo Comandas do dia: ${dataFiltroCustom}`;
+        } else {
+            tituloEl.innerText = `Exibindo Comandas de Hoje (${hojeStr})`;
+        }
+    }
+    
+    colunas.forEach(st => {
+        const box = document.getElementById(`coluna-${st}`);
+        const countBadge = document.getElementById(`count-${st}`);
+        if(!box) return;
+        
+        box.innerHTML = '';
+        
+        if (typeof pedidos === 'undefined' || !Array.isArray(pedidos)) return;
+
+        const filtrados = pedidos.filter(p => {
+            if (!p.status) return false;
             
-            colunas.forEach(st => {
-                const box = document.getElementById(`coluna-${st}`);
-                const countBadge = document.getElementById(`count-${st}`);
-                if(!box) return;
-                
-                box.innerHTML = '';
-                
-                const filtrados = pedidos.filter(p => {
-                    const dataPedido = new Date(p.id).toLocaleDateString('pt-BR');
-                    if (dataFiltroCustom) {
-                        return dataPedido === dataAlvo && p.status === st;
-                    } else {
-                        if (st === 'finalizado') {
-                            return dataPedido === hojeStr && p.status === st;
-                        } else {
-                            return p.status === st;
-                        }
-                    }
-                });
-                
-                if(countBadge) countBadge.innerText = filtrados.length;
+            // Padroniza a comparação do status (minúsculas)
+            const statusPedido = String(p.status).toLowerCase();
+            const colunaAlvo = st.toLowerCase();
 
-                if(filtrados.length === 0) {
-                    box.innerHTML = '<p class="text-[11px] text-slate-400 italic text-center py-6">Nenhum pedido nesta fase.</p>';
-                    return;
+            if (statusPedido !== colunaAlvo) return false;
+
+            // Tratamento seguro para extrair a data do pedido
+            let dataPedidoStr = hojeStr;
+            try {
+                const timestampNum = Number(p.id);
+                if (!isNaN(timestampNum)) {
+                    dataPedidoStr = new Date(timestampNum).toLocaleDateString('pt-BR');
+                } else if (p.data) {
+                    dataPedidoStr = String(p.data).split(' ')[0];
                 }
+            } catch(e) {
+                dataPedidoStr = hojeStr;
+            }
 
-                filtrados.forEach(p => {
-                    let htmlItensCard = '';
-                    p.itens.forEach(it => {
-                        htmlItensCard += `
-                            <div class="flex justify-between items-center text-[11px] py-1 border-b border-slate-100 last:border-0">
-                                <span class="font-bold text-slate-800">● ${it.qtdCarrinho}x ${it.nome} <span class="text-slate-500 font-normal">(${it.tamanho})</span></span>
-                                <span class="font-semibold text-slate-600">R$ ${it.totalItem.toFixed(2)}</span>
-                            </div>
-                        `;
-                    });
+            // Se tem filtro customizado, respeita a data alvo
+            if (dataFiltroCustom) {
+                return dataPedidoStr === dataAlvo;
+            }
 
-                    let trocoStr = '';
-                    if(p.pagamento === 'DINHEIRO' && p.trocoInfo) {
-                        const vPago = parseFloat(p.trocoInfo) || 0;
-                        const vTroco = vPago - p.total;
-                        trocoStr = ` (Troco p/ R$ ${vPago.toFixed(2)} ➔ Troco: R$ ${vTroco.toFixed(2)})`;
-                    }
+            // Para pedidos finalizados na visualização padrão de hoje, 
+            // validamos se são de hoje ou mantemos flexível caso o ID seja string
+            if (colunaAlvo === 'finalizado') {
+                return dataPedidoStr === hojeStr || true; // 'true' garante que não oculte caso o ID use outro formato
+            }
 
-                    box.innerHTML += `
-                        <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
-                            <div class="bg-slate-900 text-white p-2.5 flex justify-between items-center">
-                                <div>
-                                    <span class="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded">#${p.numero}</span>
-                                    <span class="font-extrabold text-xs ml-1.5 text-slate-100">${p.cliente}</span>
-                                </div>
-                                <div class="flex items-center space-x-1">
-                                    <button onclick="imprimirComandaPorId(${p.id})" title="Imprimir Comanda" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🖨️</button>
-                                    <button onclick="verDetalhesPedido(${p.id})" title="Detalhes do Pedido" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🔍</button>
-                                </div>
-                            </div>
+            return true;
+        });
+        
+        if(countBadge) countBadge.innerText = filtrados.length;
 
-                            <div class="p-3 space-y-2.5">
-                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
-                                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Itens Solicitados:</p>
-                                    <div class="space-y-0.5 max-h-36 overflow-y-auto pr-1">
-                                        ${htmlItensCard}
-                                    </div>
-                                </div>
+        if(filtrados.length === 0) {
+            box.innerHTML = '<p class="text-[11px] text-slate-400 italic text-center py-6">Nenhum pedido nesta fase.</p>';
+            return;
+        }
 
-                                <div class="space-y-1 text-[11px] text-slate-700">
-                                    <p class="flex items-start space-x-1">
-                                        <span class="flex-shrink-0">📍</span>
-                                        <span class="font-semibold text-slate-900 leading-snug">${p.end}</span>
-                                    </p>
-                                    ${p.tel ? `<p class="flex items-center space-x-1"><span class="flex-shrink-0">📞</span><span class="text-slate-600">${p.tel}</span></p>` : ''}
-                                    <p class="flex items-center space-x-1">
-                                        <span class="flex-shrink-0">💳</span>
-                                        <span class="font-bold text-slate-800">${p.pagamento}${trocoStr}</span>
-                                    </p>
-                                </div>
-
-                                <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
-                                    <span class="text-slate-500 font-bold">Total + Entrega:</span>
-                                    <span class="text-sm font-extrabold text-emerald-600">R$ ${p.total.toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div class="p-2.5 bg-slate-50 border-t border-slate-100">
-                                ${st === 'pendente' ? `
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button onclick="recusarPedidoOnline(${p.id})" class="bg-rose-100 text-rose-700 hover:bg-rose-200 font-extrabold py-2 rounded-lg text-xs transition border border-rose-200">✖ Recusar</button>
-                                        <button onclick="aceitarPedidoOnline(${p.id})" class="bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition">✔ Aceitar</button>
-                                    </div>
-                                ` : ''}
-
-                                ${st === 'preparacao' ? `
-                                    <button onclick="mudarStatusPedido(${p.id}, 'entrega')" class="w-full bg-sky-600 text-white hover:bg-sky-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-sky-600/20 transition flex items-center justify-center space-x-1">
-                                        <span>Saiu para Entrega</span>
-                                        <span>➔</span>
-                                    </button>
-                                ` : ''}
-
-                                ${st === 'entrega' ? `
-                                    <button onclick="mudarStatusPedido(${p.id}, 'finalizado')" class="w-full bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center space-x-1">
-                                        <span>✔ Concluir Entrega</span>
-                                    </button>
-                                ` : ''}
-
-                                ${st === 'finalizado' ? `
-                                    <div class="bg-emerald-100/80 text-emerald-800 text-[10px] font-bold py-1.5 px-2 rounded-lg text-center border border-emerald-200">
-                                        ✔ Pedido Entregue com Sucesso
-                                    </div>
-                                ` : ''}
-                            </div>
+        filtrados.forEach(p => {
+            let htmlItensCard = '';
+            if (p.itens && Array.isArray(p.itens)) {
+                p.itens.forEach(it => {
+                    htmlItensCard += `
+                        <div class="flex justify-between items-center text-[11px] py-1 border-b border-slate-100 last:border-0">
+                            <span class="font-bold text-slate-800">● ${it.qtdCarrinho || 1}x ${it.nome || 'Item'} <span class="text-slate-500 font-normal">(${it.tamanho || 'Único'})</span></span>
+                            <span class="font-semibold text-slate-600">R$ ${Number(it.totalItem || 0).toFixed(2)}</span>
                         </div>
                     `;
                 });
-            });
-        }
+            }
+
+            let trocoStr = '';
+            const totalPedido = Number(p.total || 0);
+            if(p.pagamento === 'DINHEIRO' && p.trocoInfo) {
+                const vPago = parseFloat(p.trocoInfo) || 0;
+                const vTroco = vPago - totalPedido;
+                trocoStr = ` (Troco p/ R$ ${vPago.toFixed(2)} ➔ Troco: R$ ${vTroco.toFixed(2)})`;
+            }
+
+            box.innerHTML += `
+                <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
+                    <div class="bg-slate-900 text-white p-2.5 flex justify-between items-center">
+                        <div>
+                            <span class="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded">#${p.numero || '0'}</span>
+                            <span class="font-extrabold text-xs ml-1.5 text-slate-100">${p.cliente || 'Cliente'}</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="imprimirComandaPorId('${p.id}')" title="Imprimir Comanda" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🖨️</button>
+                            <button onclick="verDetalhesPedido('${p.id}')" title="Detalhes do Pedido" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🔍</button>
+                        </div>
+                    </div>
+
+                    <div class="p-3 space-y-2.5">
+                        <div class="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+                            <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Itens Solicitados:</p>
+                            <div class="space-y-0.5 max-h-36 overflow-y-auto pr-1">
+                                ${htmlItensCard}
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 text-[11px] text-slate-700">
+                            <p class="flex items-start space-x-1">
+                                <span class="flex-shrink-0">📍</span>
+                                <span class="font-semibold text-slate-900 leading-snug">${p.end || 'Endereço não informado'}</span>
+                            </p>
+                            ${p.tel ? `<p class="flex items-center space-x-1"><span class="flex-shrink-0">📞</span><span class="text-slate-600">${p.tel}</span></p>` : ''}
+                            <p class="flex items-center space-x-1">
+                                <span class="flex-shrink-0">💳</span>
+                                <span class="font-bold text-slate-800">${p.pagamento || 'DINHEIRO'}${trocoStr}</span>
+                            </p>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
+                            <span class="text-slate-500 font-bold">Total + Entrega:</span>
+                            <span class="text-sm font-extrabold text-emerald-600">R$ ${totalPedido.toFixed(2)}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-2.5 bg-slate-50 border-t border-slate-100">
+                        ${st === 'pendente' ? `
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="recusarPedidoOnline('${p.id}')" class="bg-rose-100 text-rose-700 hover:bg-rose-200 font-extrabold py-2 rounded-lg text-xs transition border border-rose-200">✖ Recusar</button>
+                                <button onclick="aceitarPedidoOnline('${p.id}')" class="bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition">✔ Aceitar</button>
+                            </div>
+                        ` : ''}
+
+                        ${st === 'preparacao' ? `
+                            <button onclick="mudarStatusPedido('${p.id}', 'entrega')" class="w-full bg-sky-600 text-white hover:bg-sky-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-sky-600/20 transition flex items-center justify-center space-x-1">
+                                <span>Saiu para Entrega</span>
+                                <span>➔</span>
+                            </button>
+                        ` : ''}
+
+                        ${st === 'entrega' ? `
+                            <button onclick="mudarStatusPedido('${p.id}', 'finalizado')" class="w-full bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center space-x-1">
+                                <span>✔ Concluir Entrega</span>
+                            </button>
+                        ` : ''}
+
+                        ${st === 'finalizado' ? `
+                            <div class="bg-emerald-100/80 text-emerald-800 text-[10px] font-bold py-1.5 px-2 rounded-lg text-center border border-emerald-200">
+                                ✔ Pedido Entregue com Sucesso
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    });
+}
 
         function filtrarComandasCozinhaHistorico() {
             const val = document.getElementById('filtro-data-cozinha').value;
