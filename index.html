@@ -988,107 +988,198 @@
             atualizarContadorCozinha();
         }
 
-        function salvarAdicionalGlobal(e) {
-            e.preventDefault();
-            const titulo = document.getElementById('global-ad-titulo').value.trim();
-            const nome = document.getElementById('global-ad-nome').value.trim();
-            const preco = parseFloat(document.getElementById('global-ad-preco').value) || 0;
+        async function salvarAdicionalGlobal(e) {
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+    }
 
-            if(!titulo || !nome) return;
+    const elTitulo = document.getElementById('global-ad-titulo');
+    const elNome = document.getElementById('global-ad-nome');
+    const elPreco = document.getElementById('global-ad-preco');
 
-            const novoAd = { id: Date.now(), titulo, nome, preco };
-            bibliotecaAdicionais.push(novoAd);
+    const titulo = elTitulo ? elTitulo.value.trim() : '';
+    const nome = elNome ? elNome.value.trim() : '';
+    const preco = elPreco ? parseFloat(elPreco.value) || 0 : 0;
 
-            salvarDadosLocal();
-            salvarNoFirebase('bibliotecaAdicionais', novoAd.id, novoAd);
+    if (!titulo || !nome) {
+        alert('Por favor, preencha o grupo e o nome do adicional.');
+        return;
+    }
 
-            renderizarBibliotecaAdicionais();
-            renderizarCheckboxesCadastroPrato();
+    // Cria o ID como string para padronizar com o Firebase
+    const novoAd = { 
+        id: String(Date.now()), 
+        titulo, 
+        nome, 
+        preco 
+    };
 
-            document.getElementById('global-ad-titulo').value = '';
-            document.getElementById('global-ad-nome').value = '';
-            document.getElementById('global-ad-preco').value = '';
-            alert('Adicional salvo com sucesso!');
-        }
+    if (typeof bibliotecaAdicionais === 'undefined') {
+        window.bibliotecaAdicionais = [];
+    }
+
+    bibliotecaAdicionais.push(novoAd);
+
+    // Salva localmente
+    if (typeof salvarDadosLocal === 'function') {
+        salvarDadosLocal();
+    }
+
+    // Salva no Firebase na coleção correta
+    if (typeof salvarNoFirebase === 'function') {
+        await salvarNoFirebase('bibliotecaAdicionais', novoAd.id, novoAd);
+    }
+
+    // Atualiza as telas
+    if (typeof renderizarBibliotecaAdicionais === 'function') renderizarBibliotecaAdicionais();
+    if (typeof renderizarCheckboxesCadastroPrato === 'function') renderizarCheckboxesCadastroPrato();
+
+    // Limpa os campos do formulário
+    if (elTitulo) elTitulo.value = '';
+    if (elNome) elNome.value = '';
+    if (elPreco) elPreco.value = '';
+
+    alert('Adicional salvo com sucesso!');
+}
 
         function renderizarBibliotecaAdicionais() {
-            const tb = document.getElementById('tabela-biblioteca-adicionais');
-            if(!tb) return;
-            tb.innerHTML = '';
+    const tb = document.getElementById('tabela-biblioteca-adicionais');
+    if(!tb) return;
+    tb.innerHTML = '';
 
-            if(bibliotecaAdicionais.length === 0) {
-                tb.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400 italic">Nenhum adicional cadastrado.</td></tr>';
-                return;
-            }
+    if (!bibliotecaAdicionais || bibliotecaAdicionais.length === 0) {
+        tb.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400 italic">Nenhum adicional cadastrado.</td></tr>';
+        return;
+    }
 
-            bibliotecaAdicionais.forEach((ad, index) => {
-                tb.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                        <td class="px-3 py-2 font-semibold text-amber-900"><span class="bg-amber-100 px-2 py-0.5 rounded-full text-[10px]">${ad.titulo || 'Geral'}</span></td>
-                        <td class="px-3 py-2 font-bold text-slate-800">${ad.nome}</td>
-                        <td class="px-3 py-2 font-extrabold text-emerald-600">R$ ${ad.preco.toFixed(2)}</td>
-                        <td class="px-3 py-2 text-center space-x-2">
-                            <button onclick="abrirModalEditarAdicional(${index})" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold text-[10px] transition">Editar</button>
-                            <button onclick="excluirAdicionalGlobal(${ad.id})" class="px-2 py-0.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition">Excluir</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
+    bibliotecaAdicionais.forEach((ad) => {
+        const precoNum = Number(ad.preco || 0);
+        
+        tb.innerHTML += `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                <td class="px-3 py-2 font-semibold text-amber-900"><span class="bg-amber-100 px-2 py-0.5 rounded-full text-[10px]">${ad.titulo || 'Geral'}</span></td>
+                <td class="px-3 py-2 font-bold text-slate-800">${ad.nome || ''}</td>
+                <td class="px-3 py-2 font-extrabold text-emerald-600">R$ ${precoNum.toFixed(2)}</td>
+                <td class="px-3 py-2 text-center space-x-2">
+                    <button onclick="abrirModalEditarAdicional('${ad.id}')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold text-[10px] transition">Editar</button>
+                    <button onclick="excluirAdicionalGlobal('${ad.id}')" class="px-2 py-0.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition">Excluir</button>
+                </td>
+            </tr>
+        `;
+    });
+}
 
-        function abrirModalEditarAdicional(index) {
-            const ad = bibliotecaAdicionais[index];
-            if(!ad) return;
+        function abrirModalEditarAdicional(id) {
+    const idStr = String(id);
+    const ad = bibliotecaAdicionais.find(a => String(a.id) === idStr);
+    if (!ad) return;
 
-            document.getElementById('edit-ad-id').value = index;
-            document.getElementById('edit-ad-titulo').value = ad.titulo || '';
-            document.getElementById('edit-ad-nome').value = ad.nome;
-            document.getElementById('edit-ad-preco').value = ad.preco;
+    // Guarda o ID no campo oculto do modal
+    const elId = document.getElementById('edit-ad-id');
+    const elTitulo = document.getElementById('edit-ad-titulo');
+    const elNome = document.getElementById('edit-ad-nome');
+    const elPreco = document.getElementById('edit-ad-preco');
+    const elModal = document.getElementById('modal-editar-adicional');
 
-            document.getElementById('modal-editar-adicional').classList.remove('hidden');
-        }
+    if (elId) elId.value = ad.id;
+    if (elTitulo) elTitulo.value = ad.titulo || '';
+    if (elNome) elNome.value = ad.nome || '';
+    if (elPreco) elPreco.value = Number(ad.preco || 0);
+
+    if (elModal) elModal.classList.remove('hidden');
+}
 
         function fecharModalEditarAdicional() {
-            document.getElementById('modal-editar-adicional').classList.add('hidden');
+    const modal = document.getElementById('modal-editar-adicional');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+        async function salvarEdicaoAdicionalGlobal() {
+    const idAdicional = document.getElementById('edit-ad-id').value;
+    const novoTitulo = document.getElementById('edit-ad-titulo').value.trim();
+    const novoNome = document.getElementById('edit-ad-nome').value.trim();
+    const novoPreco = parseFloat(document.getElementById('edit-ad-preco').value);
+
+    if(!idAdicional || !novoTitulo || !novoNome || isNaN(novoPreco)) {
+        return alert('Preencha todos os campos corretamente!');
+    }
+
+    // Busca o adicional na lista global pelo ID (tratando como string)
+    const adObj = bibliotecaAdicionais.find(a => String(a.id) === String(idAdicional));
+
+    if(adObj) {
+        adObj.titulo = novoTitulo;
+        adObj.nome = novoNome;
+        adObj.preco = novoPreco;
+
+        // Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
         }
 
-        function salvarEdicaoAdicionalGlobal() {
-            const index = parseInt(document.getElementById('edit-ad-id').value);
-            const novoTitulo = document.getElementById('edit-ad-titulo').value.trim();
-            const novoNome = document.getElementById('edit-ad-nome').value.trim();
-            const novoPreco = parseFloat(document.getElementById('edit-ad-preco').value);
-
-            if(!novoTitulo || !novoNome || isNaN(novoPreco)) {
-                return alert('Preencha todos os campos corretamente!');
-            }
-
-            if(bibliotecaAdicionais[index]) {
-                const adObj = bibliotecaAdicionais[index];
-                adObj.titulo = novoTitulo;
-                adObj.nome = novoNome;
-                adObj.preco = novoPreco;
-
-                salvarDadosLocal();
-                salvarNoFirebase('bibliotecaAdicionais', adObj.id, adObj);
-
-                renderizarBibliotecaAdicionais();
-                renderizarCheckboxesCadastroPrato();
-                renderizarCardapio();
-                renderizarPratosOnline();
-                fecharModalEditarAdicional();
-                alert('Adicional atualizado com sucesso!');
-            }
+        // Salva/Atualiza no Firebase
+        if (typeof salvarNoFirebase === 'function') {
+            await salvarNoFirebase('bibliotecaAdicionais', adObj.id, adObj);
         }
 
-        function excluirAdicionalGlobal(id) {
-            if(confirm('Deseja excluir este adicional?')) {
-                bibliotecaAdicionais = bibliotecaAdicionais.filter(a => a.id !== id);
-                salvarDadosLocal();
-                excluirDoFirebase('bibliotecaAdicionais', id);
-                renderizarBibliotecaAdicionais();
-                renderizarCheckboxesCadastroPrato();
-            }
+        // Atualiza as telas
+        if (typeof renderizarBibliotecaAdicionais === 'function') renderizarBibliotecaAdicionais();
+        if (typeof renderizarCheckboxesCadastroPrato === 'function') renderizarCheckboxesCadastroPrato();
+        if (typeof renderizarCardapio === 'function') renderizarCardapio();
+        if (typeof renderizarPratosOnline === 'function') renderizarPratosOnline();
+        
+        // Fecha o modal
+        if (typeof fecharModalEditarAdicional === 'function') {
+            fecharModalEditarAdicional();
+        } else {
+            const modal = document.getElementById('modal-editar-adicional');
+            if(modal) modal.classList.add('hidden');
         }
+
+        alert('Adicional atualizado com sucesso!');
+    } else {
+        alert('Erro: Adicional não encontrado para edição.');
+    }
+}
+
+        async function excluirAdicionalGlobal(id) {
+    if (!confirm('Deseja excluir este adicional?')) return;
+
+    const idStr = String(id);
+
+    try {
+        // 1. Remove da lista local na memória
+        bibliotecaAdicionais = bibliotecaAdicionais.filter(a => String(a.id) !== idStr);
+        
+        // 2. Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
+        }
+
+        // 3. Exclui do Firebase
+        if (typeof excluirDoFirebase === 'function') {
+            await excluirDoFirebase('bibliotecaAdicionais', idStr);
+        } else if (db) {
+            await db.collection('bibliotecaAdicionais').doc(idStr).delete();
+        }
+
+        // 4. Atualiza as telas do painel
+        if (typeof renderizarBibliotecaAdicionais === 'function') {
+            renderizarBibliotecaAdicionais();
+        }
+        if (typeof renderizarCheckboxesCadastroPrato === 'function') {
+            renderizarCheckboxesCadastroPrato();
+        }
+
+        console.log("Adicional global excluído com sucesso:", idStr);
+
+    } catch (error) {
+        console.error("Erro ao excluir adicional global:", error);
+        alert("Erro ao excluir o adicional. Verifique o console (F12).");
+    }
+}
 
         function renderizarCheckboxesCadastroPrato(vinculadosIds = []) {
             const container = document.getElementById('container-checkbox-adicionais');
