@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Estilo CSS para remover margens, cabeçalhos e barras do Streamlit (Tela Cheia)
+# Estilo CSS para zerar margens e forçar tela cheia
 st.markdown("""
     <style>
         header {visibility: hidden;}
@@ -28,37 +28,46 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Função para converter as imagens da pasta static em Base64
 def carregar_imagem_base64(caminho):
+    """Procura a imagem no caminho indicado ou com extensão alternativa (.jpg / .jpeg)"""
+    if not os.path.exists(caminho):
+        if caminho.endswith('.jpeg'):
+            caminho = caminho.replace('.jpeg', '.jpg')
+        elif caminho.endswith('.jpg'):
+            caminho = caminho.replace('.jpg', '.jpeg')
+
     if os.path.exists(caminho):
-        with open(caminho, "rb") as image_file:
-            encoded = base64.b64encode(image_file.read()).decode('utf-8')
-            extensao = caminho.split('.')[-1].lower()
-            if extensao == 'jpg':
-                extensao = 'jpeg'
-            return f"data:image/{extensao};base64,{encoded}"
+        with open(caminho, "rb") as img_file:
+            encoded = base64.b64encode(img_file.read()).decode('utf-8')
+            ext = caminho.split('.')[-1].lower()
+            if ext == 'jpg':
+                ext = 'jpeg'
+            return f"data:image/{ext};base64,{encoded}"
     return ""
 
+# Carrega as imagens
 logo_b64 = carregar_imagem_base64("static/logo.jpeg")
 cabecalho_b64 = carregar_imagem_base64("static/cabecalho.jpg")
 
-# Lê e injeta as imagens diretamente no cardapio.html
 try:
     with open("cardapio.html", "r", encoding="utf-8") as f:
         html_cardapio = f.read()
 
-    if cabecalho_b64:
-        html_cardapio = html_cardapio.replace('/app/static/cabecalho.jpg', cabecalho_b64)
-        html_cardapio = html_cardapio.replace('./app/static/cabecalho.jpg', cabecalho_b64)
-        html_cardapio = html_cardapio.replace('cabecalho.jpg', cabecalho_b64)
-        
+    # Substitui todas as formas possíveis de src da logo no HTML
     if logo_b64:
-        html_cardapio = html_cardapio.replace('/app/static/logo.jpeg', logo_b64)
-        html_cardapio = html_cardapio.replace('./app/static/logo.jpeg', logo_b64)
-        html_cardapio = html_cardapio.replace('logo.jpeg', logo_b64)
+        html_cardapio = html_cardapio.replace('src="/app/static/logo.jpeg"', f'src="{logo_b64}"')
+        html_cardapio = html_cardapio.replace('src="./app/static/logo.jpeg"', f'src="{logo_b64}"')
+        html_cardapio = html_cardapio.replace('src="logo.jpeg"', f'src="{logo_b64}"')
+        html_cardapio = html_cardapio.replace('src="/app/static/logo.jpg"', f'src="{logo_b64}"')
 
-    # Renderiza o cardápio em tela cheia
+    # Substitui todas as formas possíveis de src do cabeçalho no HTML
+    if cabecalho_b64:
+        html_cardapio = html_cardapio.replace('src="/app/static/cabecalho.jpg"', f'src="{cabecalho_b64}"')
+        html_cardapio = html_cardapio.replace('src="./app/static/cabecalho.jpg"', f'src="{cabecalho_b64}"')
+        html_cardapio = html_cardapio.replace('src="cabecalho.jpg"', f'src="{cabecalho_b64}"')
+
+    # Renderiza o HTML modificado no iframe do Streamlit
     components.html(html_cardapio, height=1000, scrolling=True)
 
 except FileNotFoundError:
-    st.error("O arquivo `cardapio.html` não foi encontrado.")
+    st.error("O arquivo `cardapio.html` não foi encontrado na raiz do repositório.")
