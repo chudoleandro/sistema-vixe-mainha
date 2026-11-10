@@ -2073,18 +2073,45 @@
     }
 }
 
-        function mudarStatusPedido(id, status) {
+        async function mudarStatusPedido(id, novoStatus) {
+    if (!db) {
+        console.error("Banco de dados não inicializado!");
+        return;
+    }
+
+    const idStr = String(id);
+
+    try {
+        // 1. Atualiza o status diretamente no Firebase
+        await db.collection('pedidos').doc(idStr).update({
+            status: novoStatus
+        });
+        console.log(`Pedido ${idStr} atualizado para o status: ${novoStatus} no Firebase`);
+
+        // 2. Atualiza a lista local de pedidos na memória
+        if (typeof pedidos !== 'undefined') {
             pedidos = pedidos.map(p => {
-                if(p.id === id) {
-                    let atualizado = {...p, status};
-                    salvarNoFirebase('pedidos', atualizado.id, atualizado);
-                    return atualizado;
+                if (String(p.id) === idStr) {
+                    return { ...p, status: novoStatus };
                 }
                 return p;
             });
-            salvarDadosLocal(); 
+
+            if (typeof salvarDadosLocal === 'function') {
+                salvarDadosLocal();
+            }
+        }
+
+        // 3. Atualiza a tela da cozinha para o card se mover de coluna
+        if (typeof renderizarCozinha === 'function') {
             renderizarCozinha();
         }
+
+    } catch (error) {
+        console.error("Erro ao alterar o status do pedido no Firebase:", error);
+        alert("Erro ao atualizar o status do pedido. Verifique o console (F12).");
+    }
+}
 
         function imprimirComandaPorId(id) {
             const pedido = pedidos.find(p => p.id === id);
