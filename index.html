@@ -1687,37 +1687,68 @@
 
         function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); }
 
-        function salvarEdicaoPrato() {
-            const id = parseInt(document.getElementById('edit-id').value);
-            const item = cardapio.find(i => i.id === id);
-            if(item) {
-                item.nome = document.getElementById('edit-nome').value;
-                item.categoria = document.getElementById('edit-categoria').value;
-                item.tamanho = document.getElementById('edit-tamanho').value;
-                item.preco = parseFloat(document.getElementById('edit-preco').value);
+        async function salvarEdicaoPrato() {
+    const idInput = document.getElementById('edit-id').value;
+    if (!idInput) return;
 
-                let novosAdicionais = [];
-                const checks = document.querySelectorAll('.check-adicional-edit:checked');
-                checks.forEach(cb => {
-                    const idAd = parseInt(cb.value);
-                    const objAd = bibliotecaAdicionais.find(a => a.id === idAd);
-                    if(objAd) {
-                        novosAdicionais.push({ id: objAd.id, titulo: objAd.titulo, nome: objAd.nome, preco: objAd.preco });
-                    }
+    const idStr = String(idInput);
+    const item = cardapio.find(i => String(i.id) === idStr);
+    
+    if (item) {
+        // Atualiza os campos básicos
+        item.nome = document.getElementById('edit-nome').value.trim();
+        item.categoria = document.getElementById('edit-categoria').value.trim();
+        item.tamanho = document.getElementById('edit-tamanho').value.trim();
+        item.preco = parseFloat(document.getElementById('edit-preco').value) || 0;
+
+        // Coleta os adicionais selecionados nos checkboxes
+        let novosAdicionais = [];
+        const checks = document.querySelectorAll('.check-adicional-edit:checked');
+        
+        checks.forEach(cb => {
+            const idAdStr = String(cb.value);
+            const objAd = bibliotecaAdicionais.find(a => String(a.id) === idAdStr);
+            if (objAd) {
+                novosAdicionais.push({ 
+                    id: objAd.id, 
+                    titulo: objAd.titulo, 
+                    nome: objAd.nome, 
+                    preco: objAd.preco 
                 });
-                item.adicionais = novosAdicionais;
-
-                salvarDadosLocal();
-                salvarNoFirebase('cardapio', item.id, item);
-
-                renderizarCardapio(); 
-                renderizarPratosOnline(); 
-                carregarSelectsPDV(); 
-                atualizarSelectPratoOrigemCopia();
-                fecharModalEditar();
-                alert('Prato atualizado com sucesso!');
             }
+        });
+        
+        item.adicionais = novosAdicionais;
+
+        // Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
         }
+
+        // Salva no Firebase de forma assíncrona
+        if (typeof salvarNoFirebase === 'function') {
+            await salvarNoFirebase('cardapio', String(item.id), item);
+        }
+
+        // Atualiza todas as telas e selects do sistema
+        if (typeof renderizarCardapio === 'function') renderizarCardapio(); 
+        if (typeof renderizarPratosOnline === 'function') renderizarPratosOnline(); 
+        if (typeof carregarSelectsPDV === 'function') carregarSelectsPDV(); 
+        if (typeof atualizarSelectPratoOrigemCopia === 'function') atualizarSelectPratoOrigemCopia();
+        
+        // Fecha o modal de edição
+        if (typeof fecharModalEditar === 'function') {
+            fecharModalEditar();
+        } else {
+            const modal = document.getElementById('modal-editar');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        alert('Prato atualizado com sucesso!');
+    } else {
+        alert('Erro: Prato não encontrado para edição.');
+    }
+}
 
         function salvarItemEstoque(e) {
             e.preventDefault();
