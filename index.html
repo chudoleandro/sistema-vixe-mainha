@@ -1531,20 +1531,81 @@
             });
         }
 
-        function toggleVisibilidadeOnline(id, visible) {
-            const item = cardapio.find(i => i.id === id);
-            if(item) { item.visivelOnline = visible; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); }
+        async function toggleVisibilidadeOnline(id, visible) {
+    const idStr = String(id);
+    
+    // Busca o item convertendo ambos para string
+    const item = cardapio.find(i => String(i.id) === idStr);
+    
+    if (item) {
+        item.visivelOnline = visible;
+        
+        // Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
         }
+        
+        // Salva no Firebase
+        if (typeof salvarNoFirebase === 'function') {
+            await salvarNoFirebase('cardapio', String(item.id), item);
+        }
+        
+        console.log(`Visibilidade do item ${item.nome} alterada para: ${visible}`);
+    } else {
+        console.error("Item do cardápio não encontrado para alteração de visibilidade, ID:", idStr);
+    }
+}
 
-        function atualizarDescricaoPrato(id, desc) {
-            const item = cardapio.find(i => i.id === id);
-            if(item) { item.descricao = desc; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); }
+        async function atualizarDescricaoPrato(id, desc) {
+    const idStr = String(id);
+    const item = cardapio.find(i => String(i.id) === idStr);
+    
+    if (item) {
+        item.descricao = desc;
+        
+        // Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
         }
+        
+        // Salva no Firebase
+        if (typeof salvarNoFirebase === 'function') {
+            await salvarNoFirebase('cardapio', String(item.id), item);
+        }
+        
+        console.log(`Descrição do item ${item.nome} atualizada com sucesso!`);
+    } else {
+        console.error("Item do cardápio não encontrado para atualização de descrição, ID:", idStr);
+    }
+}
 
-        function atualizarPrecoPrato(id, val) {
-            const item = cardapio.find(i => i.id === id);
-            if(item) { item.preco = parseFloat(val) || 0; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); renderizarCardapio(); carregarSelectsPDV(); }
+        async function atualizarPrecoPrato(id, val) {
+    const idStr = String(id);
+    const item = cardapio.find(i => String(i.id) === idStr);
+    
+    if (item) {
+        item.preco = parseFloat(val) || 0;
+        
+        // Salva localmente
+        if (typeof salvarDadosLocal === 'function') {
+            salvarDadosLocal();
         }
+        
+        // Salva no Firebase
+        if (typeof salvarNoFirebase === 'function') {
+            await salvarNoFirebase('cardapio', String(item.id), item);
+        }
+        
+        // Atualiza as telas afetadas
+        if (typeof renderizarCardapio === 'function') renderizarCardapio();
+        if (typeof renderizarPratosOnline === 'function') renderizarPratosOnline();
+        if (typeof carregarSelectsPDV === 'function') carregarSelectsPDV();
+        
+        console.log(`Preço do item ${item.nome} atualizado para R$ ${item.preco.toFixed(2)}`);
+    } else {
+        console.error("Item do cardápio não encontrado para atualização de preço, ID:", idStr);
+    }
+}
 
         function excluirPrato(id) {
             if(confirm('Tem certeza que deseja excluir este produto?')) {
