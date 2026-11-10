@@ -1,0 +1,2146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixe Mainha Marmitaria e Cuscuzeria Pro - Gestao Comercial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SDKs do Firebase Compat (Carregam a variavel global 'firebase' para o executavel Python) -->
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; font-size: 12px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .sidebar-expanded { width: 14rem; }
+        .sidebar-collapsed { width: 4.5rem; }
+        .sidebar-collapsed .menu-text, 
+        .sidebar-collapsed .menu-badge,
+        .sidebar-collapsed .brand-info,
+        .sidebar-collapsed .menu-header { display: none; }
+        .sidebar-collapsed .menu-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        .sidebar-collapsed .brand-container { justify-content: center; padding-left: 0; padding-right: 0; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #comanda-impressao, #comanda-impressao * { visibility: visible; }
+            #comanda-impressao {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 72mm;
+                margin: 0;
+                padding: 4mm;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 11px;
+                color: #000;
+                background: #fff;
+            }
+            @page { margin: 0; size: auto; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- MENU LATERAL -->
+        <aside id="sidebar" class="sidebar-expanded bg-slate-950 text-slate-300 flex flex-col justify-between shadow-2xl z-30 border-r border-slate-800/80 flex-shrink-0 transition-all duration-300 relative">
+            <div>
+                <div class="px-3 py-4 flex items-center justify-between border-b border-slate-800/80 bg-slate-900/50 brand-container">
+                    <div class="flex items-center space-x-2.5 overflow-hidden">
+                        <img src="./app/static/logo.jpeg" alt="Logo" class="w-8 h-8 rounded-lg object-cover border border-slate-700 shadow-md flex-shrink-0" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=VM';">
+                        <div class="overflow-hidden brand-info">
+                            <h1 class="font-extrabold text-slate-100 text-xs leading-tight tracking-tight truncate" title="Vixe Mainha">Vixe Mainha</h1>
+                            <span class="text-[9px] text-amber-400 font-semibold tracking-wider uppercase block truncate">Marmitaria & Cuscuzeria</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="toggleSidebar()" id="btn-toggle-sidebar" title="Recolher/Expandir Menu" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition">
+                        <svg id="icon-arrow" class="w-4 h-4 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <nav class="px-2 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
+                    <div>
+                        <p class="px-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 menu-header">Principal</p>
+                        <button onclick="mudarAba('dashboard')" id="btn-dashboard" title="Dashboard" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                            <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            <span class="menu-text">Dashboard</span>
+                        </button>
+                    </div>
+
+                    <div>
+                        <p class="px-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 menu-header">Operacao</p>
+                        <div class="space-y-1">
+                            <button onclick="mudarAba('pdv')" id="btn-pdv" title="PDV / Novo Pedido" class="menu-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <div class="flex items-center space-x-2.5">
+                                    <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"></path></svg>
+                                    <span class="menu-text">PDV / Novo Pedido</span>
+                                </div>
+                                <span class="bg-red-500/10 text-red-400 border border-red-500/20 text-[8px] font-bold px-1 py-0.5 rounded menu-badge">PDV</span>
+                            </button>
+
+                            <button onclick="mudarAba('cozinha')" id="btn-cozinha" title="Cozinha & Entregas" class="menu-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <div class="flex items-center space-x-2.5">
+                                    <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="menu-text">Cozinha & Entregas</span>
+                                </div>
+                                <span id="badge-pedidos-cozinha" class="bg-slate-800 text-slate-300 text-[9px] font-bold px-1.5 py-0.5 rounded-full menu-badge">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="px-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 menu-header">Gestao & Firebase</p>
+                        <div class="space-y-1">
+                            <button onclick="mudarAba('config_firebase')" id="btn-config_firebase" title="Configurar Firebase" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                                <span class="menu-text">Configurar Firebase</span>
+                            </button>
+
+                            <button onclick="mudarAba('vendas_online')" id="btn-vendas_online" title="Pagina de Vendas / iFood" class="menu-item w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <div class="flex items-center space-x-2.5">
+                                    <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                                    <span class="menu-text">Pagina de Vendas (iFood)</span>
+                                </div>
+                                <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[8px] font-bold px-1 py-0.5 rounded menu-badge">Site</span>
+                            </button>
+
+                            <button onclick="mudarAba('biblioteca_adicionais')" id="btn-biblioteca_adicionais" title="Biblioteca de Adicionais" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                <span class="menu-text">Biblioteca de Adicionais</span>
+                            </button>
+
+                            <button onclick="mudarAba('cardapio')" id="btn-cardapio" title="Cardapio & Pratos" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                                <span class="menu-text">Cardapio & Pratos</span>
+                            </button>
+
+                            <button onclick="mudarAba('estoque')" id="btn-estoque" title="Controle de Estoque" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                                <span class="menu-text">Controle de Estoque</span>
+                            </button>
+
+                            <button onclick="mudarAba('caixa')" id="btn-caixa" title="Caixa & Financeiro" class="menu-item w-full flex items-center space-x-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-all group text-slate-400 hover:bg-slate-900 hover:text-slate-200">
+                                <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span class="menu-text">Caixa & Financeiro</span>
+                            </button>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="p-3 border-t border-slate-800/80 bg-slate-900/30">
+                <div class="flex items-center space-x-2 px-1 py-0.5 justify-center sm:justify-start">
+                    <div class="relative flex-shrink-0">
+                        <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-[10px] text-slate-300">
+                            OP
+                        </div>
+                        <span id="firebase-status-dot" class="absolute bottom-0 right-0 w-2 h-2 bg-rose-500 border-2 border-slate-950 rounded-full" title="Firebase Desconectado"></span>
+                    </div>
+                    <div class="overflow-hidden brand-info">
+                        <p class="text-[11px] font-semibold text-slate-200 truncate">Operador Caixa</p>
+                        <p id="firebase-status-txt" class="text-[9px] text-rose-400 font-medium truncate">● Firebase Off</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- AREA PRINCIPAL -->
+        <div class="flex-1 flex flex-col overflow-hidden relative">
+            <header class="bg-white border-b border-slate-200 px-5 py-3 flex justify-between items-center z-10 shadow-sm flex-shrink-0">
+                <div>
+                    <h2 id="titulo-topo" class="text-lg font-bold text-slate-900 tracking-tight">Visao Geral / Dashboard</h2>
+                </div>
+                <div class="flex items-center space-x-2.5">
+                    <div id="alerta-estoque-topo" class="hidden bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center space-x-1 animate-pulse">
+                        <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Estoque Critico</span>
+                    </div>
+                    <div class="bg-slate-100 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-600 border border-slate-200 flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Sistema Ativo</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 p-4 sm:p-5">
+
+                <!-- CONFIGURACAO FIREBASE -->
+                <section id="tab-config_firebase" class="hidden space-y-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="border-b border-slate-100 pb-3">
+                            <h3 class="text-sm font-bold text-slate-900">🔥 Configuracao de Conexao com o Firebase Firestore</h3>
+                            <p class="text-[11px] text-slate-500 mt-1">Cole abaixo o objeto de configuracao (firebaseConfig) obtido no seu Console do Firebase para sincronizar os dados do seu negocio em tempo real.</p>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Cole aqui o JSON ou objeto `firebaseConfig`:</label>
+                                <textarea id="input-firebase-config" rows="6" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "seu-projeto.firebaseapp.com",
+  "projectId": "seu-projeto",
+  "storageBucket": "seu-projeto.appspot.com",
+  "messagingSenderId": "123456...",
+  "appId": "1:1234..."
+}' class="w-full border border-slate-300 p-3 rounded-lg text-[11px] font-mono bg-slate-50"></textarea>
+                            </div>
+                            <div class="flex justify-end space-x-2">
+                                <button onclick="salvarConfiguracaoFirebase()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-emerald-700 transition shadow-md">Conectar e Salvar Firebase</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DASHBOARD -->
+                <section id="tab-dashboard" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Faturamento Hoje (Diario)</p>
+                            <h3 id="dash-faturamento" class="text-lg font-extrabold text-slate-900 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Faturamento Mensal Acumulado</p>
+                            <h3 id="dash-mensal" class="text-lg font-extrabold text-indigo-600 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Total de Pedidos Hoje</p>
+                            <h3 id="dash-pedidos" class="text-lg font-extrabold text-slate-900 mt-0.5 truncate">0</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Lucro Liquido Real (Hoje)</p>
+                            <h3 id="dash-lucro" class="text-lg font-extrabold text-emerald-600 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                    </div>
+
+                    <!-- FILTRO HISTORICO DE FATURAMENTO RETROATIVO -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-900">🔍 Consultar Faturamento Passado (Dias / 10 dias atras / Meses)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Selecione uma Data Especifica:</label>
+                                <input type="date" id="filtro-data-historico" class="w-full border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                            </div>
+                            <div class="flex space-x-2">
+                                <button type="button" onclick="consultarFaturamentoHistorico()" class="w-full bg-slate-800 text-white p-2 rounded-lg font-bold text-xs hover:bg-slate-900 transition shadow-md">Consultar Data</button>
+                                <button type="button" onclick="consultarFaturamentoUltimosDias(10)" class="w-full bg-indigo-600 text-white p-2 rounded-lg font-bold text-xs hover:bg-indigo-700 transition shadow-md">Ultimos 10 Dias</button>
+                            </div>
+                            <div class="text-right">
+                                <button type="button" onclick="limparFiltroHistorico()" class="text-xs text-rose-600 font-bold hover:underline">🔄 Ver Faturamento de Hoje</button>
+                            </div>
+                        </div>
+                        <div id="resultado-historico-box" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2 flex justify-between items-center">
+                            <div>
+                                <p id="resultado-historico-titulo" class="text-[11px] font-bold text-slate-700">Resultado da Consulta:</p>
+                                <p id="resultado-historico-valor" class="text-sm font-extrabold text-emerald-600">R$ 0,00</p>
+                            </div>
+                            <span id="resultado-historico-qtd" class="bg-slate-200 text-slate-800 text-[10px] font-bold px-2 py-1 rounded-lg">0 pedidos</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-sm font-bold text-slate-900 mb-1.5">Painel Gestor - Vixe Mainha Marmitaria e Cuscuzeria Pro</h3>
+                        <p class="text-slate-600 text-xs leading-relaxed">Navegue pelas opcoes do menu lateral para cadastrar pratos, gerenciar sua biblioteca de adicionais por subcategorias e agilizar seus cadastros.</p>
+                    </div>
+                </section>
+
+                <!-- BIBLIOTECA DE ADICIONAIS -->
+                <section id="tab-biblioteca_adicionais" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="border-b border-slate-100 pb-2">
+                            <h3 class="text-xs font-bold text-slate-900">⭐ Cadastrar Adicional na Biblioteca Global</h3>
+                            <p class="text-[10px] text-slate-500">Defina o titulo da subcategoria (ex: "Turbine seu Prato", "Bebidas Geladas") e adicione os itens.</p>
+                        </div>
+
+                        <form onsubmit="salvarAdicionalGlobal(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Titulo / Subcategoria *</label>
+                                <input type="text" id="global-ad-titulo" placeholder="Ex: Turbine seu Prato" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Nome do Adicional *</label>
+                                <input type="text" id="global-ad-nome" placeholder="Ex: Bacon Extra / Coca-Cola" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-1">Preco (R$) *</label>
+                                <input type="number" step="0.01" id="global-ad-preco" placeholder="4.00" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-amber-600 text-white p-2 rounded-lg font-bold text-xs hover:bg-amber-700 transition shadow-md">＋ Salvar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-3.5 border-b border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-900">Adicionais Cadastrados</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                        <th class="px-3 py-2 border-b border-slate-200">Subcategoria / Titulo</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Nome do Adicional</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Preco</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-center">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-biblioteca-adicionais" class="text-[11px] divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- PAGINA DE VENDAS ONLINE / CADASTRO DE PRATOS -->
+                <section id="tab-vendas_online" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="border-b border-slate-100 pb-2">
+                            <h3 class="text-xs font-bold text-slate-900">➕ Cadastrar Prato para o Site de Vendas (iFood)</h3>
+                            <p class="text-[10px] text-slate-500">Adicione novos pratos e use a ferramenta de Copia e Cola ou selecione os adicionais por subcategorias!</p>
+                        </div>
+
+                        <!-- FERRAMENTA COPIA E COLA DE OUTRO PRATO -->
+                        <div class="bg-sky-50 p-3 rounded-xl border border-sky-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                            <div class="w-full sm:w-auto flex-1">
+                                <label class="block text-[10px] font-bold text-sky-900 mb-1">📋 Copiar Adicionais de outro Prato Pronto:</label>
+                                <select id="select-prato-origem-copia" class="w-full border border-sky-300 p-1.5 rounded-lg text-[11px] bg-white">
+                                    <option value="">-- Selecione um prato para copiar os adicionais --</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="copiarAdicionaisDeOutroPrato()" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shadow-sm mt-4 sm:mt-0">
+                                ⚡ Aplicar Copia e Cola
+                            </button>
+                        </div>
+
+                        <form onsubmit="cadastrarProdutoCompleto(event)" class="space-y-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Nome do Produto *</label>
+                                    <input type="text" id="online-nome" placeholder="Ex: Cuscuz Recheado" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Categoria *</label>
+                                    <select id="online-categoria" class="w-full border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <option value="Cuscuz">Cuscuz</option>
+                                        <option value="Marmita">Marmita / Prato Executivo</option>
+                                        <option value="Sobremesa">Sobremesa</option>
+                                        <option value="Bebida">Bebida</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Preco de Venda (R$) *</label>
+                                    <input type="number" step="0.01" id="online-preco" placeholder="18.00" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Tamanho / Porcao *</label>
+                                    <input type="text" id="online-tamanho" placeholder="Ex: M (500g)" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Descricao Detalhada do Prato *</label>
+                                    <input type="text" id="online-descricao" placeholder="Ex: Acompanha carne seca acebolada e queijo." class="w-full border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-slate-600 mb-1">📷 Upload da Foto (Dispositivo)</label>
+                                    <input type="file" id="online-foto-file" accept="image/*" class="w-full text-[10px] border border-slate-300 p-1 rounded-lg bg-slate-50 cursor-pointer">
+                                </div>
+                            </div>
+
+                            <!-- SELECAO DE ADICIONAIS AGRUPADOS POR SUBCATEGORIA -->
+                            <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-200 space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <label class="font-extrabold text-xs text-amber-950">Adicionais Vinculados a este Prato</label>
+                                    <span class="text-[10px] text-amber-800">Selecione os itens da biblioteca:</span>
+                                </div>
+                                <div id="container-checkbox-adicionais" class="space-y-2 pt-1 max-h-48 overflow-y-auto pr-1"></div>
+                            </div>
+
+                            <div class="flex justify-end pt-1">
+                                <button type="submit" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold text-xs hover:bg-emerald-700 transition shadow-md shadow-emerald-600/20">✔ Cadastrar Prato</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
+                            <h3 class="text-xs font-bold text-slate-900">Gerenciar Pratos do Site</h3>
+                            <span class="text-[10px] text-slate-500">Edite descricoes, altere valores ou exclua produtos a qualquer momento.</span>
+                        </div>
+
+                        <div id="container-pratos-online" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </div>
+                </section>
+
+                <!-- CARDAPIO -->
+                <section id="tab-cardapio" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-900 mb-2.5">Cadastrar Novo Produto ou Prato</h3>
+                        <form onsubmit="salvarPrato(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                            <input type="text" id="prato-nome" placeholder="Nome (Ex: Cuscuz Recheado)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <select id="prato-categoria" class="border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                                <option value="Cuscuz">Cuscuz</option>
+                                <option value="Marmita">Marmita</option>
+                                <option value="Sobremesa">Sobremesa</option>
+                                <option value="Bebida">Bebida</option>
+                            </select>
+                            <input type="text" id="prato-tamanho" placeholder="Tamanho (P, M, G, 350ml)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <input type="number" step="0.01" id="prato-preco" placeholder="Preco de Venda (R$)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <button type="submit" class="bg-red-600 text-white p-2 rounded-lg font-semibold hover:bg-red-700 transition shadow-md shadow-red-600/20 text-[11px]">+ Cadastrar</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-3.5 border-b border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-900">Cardapio Cadastrado</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                        <th class="px-3 py-2 border-b border-slate-200">Imagem</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Nome do Item</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Categoria</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Tamanho</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Preco</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-center">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-cardapio" class="text-[11px] divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ESTOQUE -->
+                <section id="tab-estoque" class="hidden space-y-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-900 mb-2.5">Gerenciamento de Estoque</h3>
+                        <form onsubmit="salvarItemEstoque(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+                            <input type="text" id="est-nome" placeholder="Item (Ex: Flocao de Milho)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <select id="est-categoria" class="border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                                <option value="Cuscuz">Massa / Cuscuz</option>
+                                <option value="Marmita">Marmita Pronta</option>
+                                <option value="Sobremesa">Sobremesa</option>
+                                <option value="Bebida">Bebida</option>
+                                <option value="Insumo">Insumo / Embalagem</option>
+                            </select>
+                            <input type="number" id="est-qtd" placeholder="Qtd Atual" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <input type="number" id="est-min" placeholder="Qtd Minima" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <button type="submit" class="bg-emerald-600 text-white p-2 rounded-lg font-semibold hover:bg-emerald-700 transition shadow-md text-[11px]">+ Salvar Estoque</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-3.5 border-b border-slate-100">
+                            <h3 class="text-xs font-bold text-slate-900">Inventario de Itens</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                        <th class="px-3 py-2 border-b border-slate-200">Item</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Categoria</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Qtd Atual</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Qtd Minima</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Status</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-center">Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-estoque" class="text-[11px] divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ABA PDV -->
+                <section id="tab-pdv" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div class="lg:col-span-2 space-y-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                                <h3 class="text-xs font-bold text-slate-900 mb-2.5">1. Dados do Cliente</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                                    <input type="text" id="pdv-cliente" placeholder="Nome do Cliente *" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                    <input type="text" id="pdv-tel" placeholder="Telefone / WhatsApp" class="border border-slate-300 p-2 rounded-lg text-[11px]">
+                                    <input type="text" id="pdv-end" placeholder="Endereco Completo *" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                                <h3 class="text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">2. Adicionar Produtos ao Pedido</h3>
+                                
+                                <div class="bg-amber-50/60 p-3 rounded-lg border border-amber-200/80">
+                                    <label class="block text-[11px] font-bold text-amber-900 mb-1.5">🥣 Selecionar Cuscuz</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                        <select id="pdv-select-cuscuz" class="md:col-span-2 border border-amber-300 p-2 rounded-lg text-[11px] bg-white"></select>
+                                        <input type="number" id="pdv-qtd-cuscuz" value="1" min="1" class="border border-amber-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <button type="button" onclick="adicionarItemPorSelect('pdv-select-cuscuz', 'pdv-qtd-cuscuz')" class="bg-amber-600 text-white p-2 rounded-lg font-semibold hover:bg-amber-700 transition shadow-sm text-[11px]">+ Add Cuscuz</button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-red-50/60 p-3 rounded-lg border border-red-200/80">
+                                    <label class="block text-[11px] font-bold text-red-900 mb-1.5">🍲 Selecionar Marmita</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                        <select id="pdv-select-marmita" class="md:col-span-2 border border-red-300 p-2 rounded-lg text-[11px] bg-white"></select>
+                                        <input type="number" id="pdv-qtd-marmita" value="1" min="1" class="border border-red-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <button type="button" onclick="adicionarItemPorSelect('pdv-select-marmita', 'pdv-qtd-marmita')" class="bg-red-600 text-white p-2 rounded-lg font-semibold hover:bg-red-700 transition shadow-sm text-[11px]">+ Add Marmita</button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200/80">
+                                    <label class="block text-[11px] font-bold text-emerald-900 mb-1.5">🍰 Selecionar Sobremesa</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                        <select id="pdv-select-sobremesa" class="md:col-span-2 border border-emerald-300 p-2 rounded-lg text-[11px] bg-white"></select>
+                                        <input type="number" id="pdv-qtd-sobremesa" value="1" min="1" class="border border-emerald-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <button type="button" onclick="adicionarItemPorSelect('pdv-select-sobremesa', 'pdv-qtd-sobremesa')" class="bg-emerald-600 text-white p-2 rounded-lg font-semibold hover:bg-emerald-700 transition shadow-sm text-[11px]">+ Add Sobremesa</button>
+                                    </div>
+                                </div>
+
+                                <div class="bg-sky-50/60 p-3 rounded-lg border border-sky-200/80">
+                                    <label class="block text-[11px] font-bold text-sky-900 mb-1.5">🥤 Selecionar Bebidas & Outros</label>
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                        <select id="pdv-select-bebida" class="md:col-span-2 border border-sky-300 p-2 rounded-lg text-[11px] bg-white"></select>
+                                        <input type="number" id="pdv-qtd-bebida" value="1" min="1" class="border border-sky-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <button type="button" onclick="adicionarItemPorSelect('pdv-select-bebida', 'pdv-qtd-bebida')" class="bg-sky-600 text-white p-2 rounded-lg font-semibold hover:bg-sky-700 transition shadow-sm text-[11px]">+ Add Bebida</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-xs font-bold text-slate-900 mb-2.5">3. Resumo & Pagamento</h3>
+                                <div id="carrinho-itens" class="space-y-1.5 mb-3 max-h-40 overflow-y-auto divide-y divide-slate-100 pr-1">
+                                    <p class="text-[11px] text-slate-400 italic">Nenhum produto adicionado.</p>
+                                </div>
+
+                                <div class="border-t border-slate-200 pt-2.5 space-y-1.5">
+                                    <div class="flex justify-between text-[11px] text-slate-600">
+                                        <span>Taxa de Entrega (R$):</span>
+                                        <input type="number" id="pdv-taxa" value="6.00" onchange="atualizarTotalPDV()" class="w-16 border border-slate-300 text-right p-1 rounded-md text-[11px]">
+                                    </div>
+                                    <div class="flex justify-between text-sm font-extrabold text-slate-900 border-t border-slate-100 pt-2">
+                                        <span>Total Pedido:</span>
+                                        <span id="pdv-total-txt" class="text-emerald-600">R$ 0,00</span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 space-y-1.5">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Forma de Pagamento</label>
+                                    <select id="pdv-pagamento" onchange="toggleTroco(this.value)" class="w-full border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                                        <option value="PIX">PIX</option>
+                                        <option value="CARTAO_CREDITO">Cartao de Credito</option>
+                                        <option value="CARTAO_DEBITO">Cartao de Debito</option>
+                                        <option value="DINHEIRO">Dinheiro</option>
+                                    </select>
+
+                                    <div id="box-troco" class="hidden bg-amber-50 p-2.5 rounded-lg border border-amber-200 space-y-1">
+                                        <label class="block text-[10px] font-bold text-amber-800">Troco para quanto?</label>
+                                        <input type="number" id="pdv-valor-pago" placeholder="Ex: 50.00" oninput="calcularTroco()" class="w-full border border-amber-300 p-1.5 rounded-md text-[11px] bg-white">
+                                        <p id="pdv-troco-txt" class="text-[11px] font-bold text-slate-700">Troco: R$ 0,00</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="finalizarPedidoPDV()" class="w-full mt-4 bg-emerald-600 text-white py-2.5 rounded-lg font-bold text-xs hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20">✔ Finalizar, Lancar e Imprimir</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ABA COZINHA -->
+                <section id="tab-cozinha" class="hidden space-y-4">
+                    <!-- BUSCA DE COMANDAS DE DIAS ANTERIORES -->
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="flex items-center space-x-2 w-full sm:w-auto">
+                            <span class="text-xs font-bold text-slate-700">🔍 Buscar Comanda Historica:</span>
+                            <input type="date" id="filtro-data-cozinha" class="border border-slate-300 p-1.5 rounded-lg text-[11px] bg-white">
+                            <button onclick="filtrarComandasCozinhaHistorico()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900 transition">Buscar</button>
+                            <button onclick="limparFiltroCozinhaHistorico()" class="text-xs text-rose-600 font-bold hover:underline ml-2">Ver Hoje</button>
+                        </div>
+                        <span id="titulo-cozinha-status" class="text-xs font-extrabold text-indigo-600">Exibindo Comandas de Hoje (Ativas e Concluidas)</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                        <div class="bg-rose-50/90 border border-rose-200 p-3.5 rounded-xl shadow-sm space-y-3">
+                            <div class="flex justify-between items-center pb-2 border-b border-rose-200">
+                                <h3 class="font-bold text-rose-900 text-xs flex items-center space-x-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping"></span>
+                                    <span>🟠 Novas Solicitacoes</span>
+                                </h3>
+                                <span id="count-pendente" class="bg-rose-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div id="coluna-pendente" class="space-y-3"></div>
+                        </div>
+
+                        <div class="bg-amber-50/90 border border-amber-200 p-3.5 rounded-xl shadow-sm space-y-3">
+                            <div class="flex justify-between items-center pb-2 border-b border-amber-200">
+                                <h3 class="font-bold text-amber-900 text-xs flex items-center space-x-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                    <span>🟡 Em Preparacao</span>
+                                </h3>
+                                <span id="count-preparacao" class="bg-amber-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div id="coluna-preparacao" class="space-y-3"></div>
+                        </div>
+
+                        <div class="bg-sky-50/90 border border-sky-200 p-3.5 rounded-xl shadow-sm space-y-3">
+                            <div class="flex justify-between items-center pb-2 border-b border-sky-200">
+                                <h3 class="font-bold text-sky-900 text-xs flex items-center space-x-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                                    <span>🔵 Saiu para Entrega</span>
+                                </h3>
+                                <span id="count-entrega" class="bg-sky-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div id="coluna-entrega" class="space-y-3"></div>
+                        </div>
+
+                        <div class="bg-emerald-50/90 border border-emerald-200 p-3.5 rounded-xl shadow-sm space-y-3">
+                            <div class="flex justify-between items-center pb-2 border-b border-emerald-200">
+                                <h3 class="font-bold text-emerald-900 text-xs flex items-center space-x-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>🟢 Concluidos</span>
+                                </h3>
+                                <span id="count-finalizado" class="bg-emerald-600 text-white font-extrabold text-[10px] px-2 py-0.5 rounded-full">0</span>
+                            </div>
+                            <div id="coluna-finalizado" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CAIXA -->
+                <section id="tab-caixa" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Faturamento Bruto (Hoje)</p>
+                            <h3 id="caixa-bruto" class="text-lg font-extrabold text-emerald-600 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Despesas Registradas (Hoje)</p>
+                            <h3 id="caixa-despesas" class="text-lg font-extrabold text-rose-600 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Lucro Liquido Real (Hoje)</p>
+                            <h3 id="caixa-lucro" class="text-lg font-extrabold text-slate-900 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">Taxas de Entrega (Hoje)</p>
+                            <h3 id="caixa-taxas" class="text-lg font-extrabold text-indigo-600 mt-0.5 truncate">R$ 0,00</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-900 mb-2.5">Entradas por Forma de Pagamento (Hoje)</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 overflow-hidden"><p class="text-[10px] font-bold text-slate-400 uppercase truncate">PIX</p><p id="pay-pix" class="font-extrabold text-sm text-slate-800 mt-0.5 truncate">R$ 0,00</p></div>
+                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 overflow-hidden"><p class="text-[10px] font-bold text-slate-400 uppercase truncate">Credito</p><p id="pay-credito" class="font-extrabold text-sm text-slate-800 mt-0.5 truncate">R$ 0,00</p></div>
+                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 overflow-hidden"><p class="text-[10px] font-bold text-slate-400 uppercase truncate">Debito</p><p id="pay-debito" class="font-extrabold text-sm text-slate-800 mt-0.5 truncate">R$ 0,00</p></div>
+                            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 overflow-hidden"><p class="text-[10px] font-bold text-slate-400 uppercase truncate">Dinheiro</p><p id="pay-dinheiro" class="font-extrabold text-sm text-slate-800 mt-0.5 truncate">R$ 0,00</p></div>
+                        </div>
+                    </div>
+
+                    <!-- BUSCA DE EXTRATO / CAIXA PASSADO -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                        <h3 class="text-xs font-bold text-slate-900">🔍 Buscar Caixa e Extrato por Data Anterior</h3>
+                        <div class="flex flex-col sm:flex-row items-center gap-2">
+                            <input type="date" id="filtro-data-caixa" class="w-full sm:w-auto border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                            <button type="button" onclick="filtrarCaixaHistorico()" class="w-full sm:w-auto bg-slate-800 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-slate-900 transition shadow-md">Buscar Extrato da Data</button>
+                            <button type="button" onclick="limparFiltroCaixaHistorico()" class="text-xs text-rose-600 font-bold hover:underline ml-2">🔄 Ver Caixa de Hoje</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-xs font-bold text-slate-900 mb-2.5">Lancar Despesa / Saida de Caixa (Hoje)</h3>
+                        <form onsubmit="lancarDespesa(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                            <input type="text" id="desp-desc" placeholder="Descricao (Ex: Compra de Carnes)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <input type="number" step="0.01" id="desp-valor" placeholder="Valor (R$)" class="border border-slate-300 p-2 rounded-lg text-[11px]" required>
+                            <select id="desp-cat" class="border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                                <option value="Insumos">Insumos / Alimentos</option>
+                                <option value="Embalagens">Embalagens</option>
+                                <option value="Motoboy">Motoboy</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                            <button type="submit" class="bg-rose-600 text-white p-2 rounded-lg font-semibold hover:bg-rose-700 transition text-[11px]">Registrar Despesa</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-3.5 border-b border-slate-100 flex justify-between items-center">
+                            <h3 id="titulo-tabela-caixa" class="text-xs font-bold text-slate-900">Extrato Consolidado (Hoje)</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                                        <th class="px-3 py-2 border-b border-slate-200">Data / Hora</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Tipo</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Descricao</th>
+                                        <th class="px-3 py-2 border-b border-slate-200">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-caixa" class="text-[11px] divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- PAINEL LATERAL DE DETALHES -->
+    <div id="painel-detalhes" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex justify-end">
+        <div class="w-full max-w-sm bg-white h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto">
+            <div>
+                <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+                    <h3 id="painel-titulo" class="text-sm font-extrabold text-slate-900">Detalhes</h3>
+                    <button onclick="fecharPainel()" class="text-slate-400 hover:text-slate-700 font-bold text-base">✕</button>
+                </div>
+                <div id="painel-conteudo" class="space-y-2.5 text-[11px] text-slate-600"></div>
+            </div>
+            <button onclick="fecharPainel()" class="mt-5 w-full bg-slate-100 text-slate-700 py-2 rounded-lg font-semibold hover:bg-slate-200 transition text-[11px]">Fechar Painel</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PRATO -->
+    <div id="modal-editar" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-5 rounded-xl w-full max-w-md shadow-2xl space-y-2.5 border border-slate-200 overflow-y-auto max-h-[90vh]">
+            <h3 class="text-sm font-bold text-slate-900">Editar Item do Cardapio</h3>
+            <input type="hidden" id="edit-id">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Nome:</label>
+                <input type="text" id="edit-nome" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Categoria:</label>
+                <select id="edit-categoria" class="w-full border border-slate-300 p-2 rounded-lg text-[11px] bg-white">
+                    <option value="Cuscuz">Cuscuz</option>
+                    <option value="Marmita">Marmita</option>
+                    <option value="Sobremesa">Sobremesa</option>
+                    <option value="Bebida">Bebida</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Tamanho:</label>
+                <input type="text" id="edit-tamanho" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Preco (R$):</label>
+                <input type="number" step="0.01" id="edit-preco" class="w-full border border-slate-300 p-2 rounded-lg text-[11px]">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-600 mb-1">Adicionais Vinculados:</label>
+                <div id="edit-container-checkbox-adicionais" class="space-y-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 max-h-48 overflow-y-auto"></div>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="fecharModalEditar()" class="w-1/2 bg-slate-100 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-200 text-[11px]">Cancelar</button>
+                <button onclick="salvarEdicaoPrato()" class="w-1/2 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 text-[11px]">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDICAO DE ADICIONAL GLOBAL -->
+    <div id="modal-editar-adicional" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 class="font-extrabold text-xs text-slate-900 uppercase">✏️ Editar Adicional</h3>
+                <button onclick="fecharModalEditarAdicional()" class="text-slate-400 hover:text-slate-700 font-bold text-base">✕</button>
+            </div>
+            <input type="hidden" id="edit-ad-id">
+            <div class="space-y-2">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Titulo / Subcategoria *</label>
+                    <input type="text" id="edit-ad-titulo" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Nome do Adicional *</label>
+                    <input type="text" id="edit-ad-nome" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-600 mb-1">Preco (R$) *</label>
+                    <input type="number" step="0.01" id="edit-ad-preco" class="w-full border border-slate-300 p-2 rounded-lg text-xs" required>
+                </div>
+            </div>
+            <div class="flex space-x-2 pt-2">
+                <button onclick="fecharModalEditarAdicional()" class="w-1/2 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold hover:bg-slate-300 transition">Cancelar</button>
+                <button onclick="salvarEdicaoAdicionalGlobal()" class="w-1/2 bg-emerald-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-md">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="comanda-impressao" class="hidden"></div>
+
+    <script>
+        let db = null;
+        let isFirebaseConnected = false;
+
+        let cardapio = JSON.parse(localStorage.getItem('mp_cardapio')) || [];
+        let estoque = JSON.parse(localStorage.getItem('mp_estoque')) || [];
+        let pedidos = JSON.parse(localStorage.getItem('mp_pedidos')) || [];
+        let caixa = JSON.parse(localStorage.getItem('mp_caixa')) || [];
+        let bibliotecaAdicionais = JSON.parse(localStorage.getItem('mp_biblioteca_adicionais')) || [
+            { id: 1, titulo: 'Turbine seu Prato', nome: 'Bacon Extra', preco: 4.00 },
+            { id: 2, titulo: 'Turbine seu Prato', nome: 'Queijo Coalho Extra', preco: 5.00 },
+            { id: 3, titulo: 'Bebidas Geladas', nome: 'Coca-Cola Lata 350ml', preco: 6.00 }
+        ];
+        let carrinho = [];
+
+        const titulos = { 
+            dashboard: 'Visao Geral / Dashboard', 
+            cardapio: 'Gerenciamento de Cardapio', 
+            vendas_online: 'Pagina de Vendas / Cadastro iFood',
+            biblioteca_adicionais: 'Biblioteca Global de Adicionais',
+            estoque: 'Controle de Estoque', 
+            pdv: 'PDV / Lancamento de Pedidos', 
+            cozinha: 'Cozinha & Entregas', 
+            caixa: 'Caixa & Financeiro',
+            config_firebase: 'Conexao Firestore (Firebase)'
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const defaultKey = {
+                apiKey: "AIzaSyA93ArzBuKseUDxhSxPpExh2LaWo-hm_Mw",
+                authDomain: "vixe-mainha-sistema.firebaseapp.com",
+                projectId: "vixe-mainha-sistema",
+                storageBucket: "vixe-mainha-sistema.firebasestorage.app",
+                messagingSenderId: "600209465349",
+                appId: "1:600209465349:web:00279442691514d72a7c6c"
+            };
+            
+            const savedConfig = localStorage.getItem('mp_firebase_config') || JSON.stringify(defaultKey, null, 2);
+            document.getElementById('input-firebase-config').value = savedConfig;
+            
+            // Aguarda um pequeno instante para garantir que os scripts CDN externos do Head carreguem totalmente no WebView do PyQt
+            setTimeout(() => {
+                try {
+                    conectarFirebase(JSON.parse(savedConfig));
+                } catch(e) {
+                    console.error("Erro auto-conectar:", e);
+                }
+            }, 300);
+        });
+
+        function conectarFirebase(firebaseConfig) {
+            try {
+                if (typeof firebase === 'undefined') {
+                    console.error("SDK do Firebase nao foi carregado corretamente no head!");
+                    return;
+                }
+
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                
+                db = firebase.firestore();
+                isFirebaseConnected = true;
+
+                document.getElementById('firebase-status-dot').className = "absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border-2 border-slate-950 rounded-full";
+                document.getElementById('firebase-status-txt').innerText = "● Firebase On";
+                document.getElementById('firebase-status-txt').className = "text-[9px] text-emerald-400 font-medium truncate";
+
+                sincronizarColecaoTempoReal('cardapio', (dados) => { cardapio = dados; localStorage.setItem('mp_cardapio', JSON.stringify(cardapio)); renderizarCardapio(); renderizarPratosOnline(); carregarSelectsPDV(); atualizarSelectPratoOrigemCopia(); });
+                sincronizarColecaoTempoReal('estoque', (dados) => { estoque = dados; localStorage.setItem('mp_estoque', JSON.stringify(estoque)); renderizarEstoque(); verificarAlertasEstoque(); });
+                sincronizarColecaoTempoReal('pedidos', (dados) => { pedidos = dados; localStorage.setItem('mp_pedidos', JSON.stringify(pedidos)); renderizarCozinha(); atualizarContadorCozinha(); atualizarDashboard(); });
+                sincronizarColecaoTempoReal('caixa', (dados) => { caixa = dados; localStorage.setItem('mp_caixa', JSON.stringify(caixa)); renderizarCaixa(); atualizarDashboard(); });
+                sincronizarColecaoTempoReal('bibliotecaAdicionais', (dados) => { bibliotecaAdicionais = dados; localStorage.setItem('mp_biblioteca_adicionais', JSON.stringify(bibliotecaAdicionais)); renderizarBibliotecaAdicionais(); renderizarCheckboxesCadastroPrato(); });
+
+                console.log("Firebase conectado e sincronizado com sucesso!");
+            } catch(e) {
+                console.error("Erro ao conectar no Firebase:", e);
+                isFirebaseConnected = false;
+            }
+        }
+
+        function salvarConfiguracaoFirebase() {
+            const txt = document.getElementById('input-firebase-config').value.trim();
+            try {
+                let configObj = eval('(' + txt + ')');
+                localStorage.setItem('mp_firebase_config', JSON.stringify(configObj));
+                conectarFirebase(configObj);
+                alert("Configuracao do Firebase salva com sucesso!");
+                mudarAba('dashboard');
+            } catch(e) {
+                alert("Formato de configuracao invalido. Certifique-se de colar o objeto firebaseConfig corretamente.");
+            }
+        }
+
+        async function salvarNoFirebase(colecaoNome, idDoc, dados) {
+            if(!isFirebaseConnected || !db) return;
+            try {
+                await db.collection(colecaoNome).doc(String(idDoc)).set(dados);
+            } catch(e) {
+                console.error(`Erro ao salvar em ${colecaoNome}:`, e);
+            }
+        }
+
+        async function excluirDoFirebase(colecaoNome, idDoc) {
+            if(!isFirebaseConnected || !db) return;
+            try {
+                await db.collection(colecaoNome).doc(String(idDoc)).delete();
+            } catch(e) {
+                console.error(`Erro ao excluir em ${colecaoNome}:`, e);
+            }
+        }
+
+        function sincronizarColecaoTempoReal(nomeColecao, callback) {
+            if(!db) return;
+            db.collection(nomeColecao).onSnapshot((snapshot) => {
+                let lista = [];
+                snapshot.forEach(doc => {
+                    lista.push(doc.data());
+                });
+                if(lista.length > 0) {
+                    callback(lista);
+                }
+            });
+        }
+
+        function obterDataAtualStr(d = new Date()) {
+            const dia = String(d.getDate()).padStart(2, '0');
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const ano = d.getFullYear();
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'mp_pedidos') {
+                pedidos = JSON.parse(e.newValue) || [];
+                renderizarCozinha();
+                atualizarContadorCozinha();
+            }
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const iconArrow = document.getElementById('icon-arrow');
+            
+            if (sidebar.classList.contains('sidebar-expanded')) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                iconArrow.classList.add('rotate-180');
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                iconArrow.classList.remove('rotate-180');
+            }
+        }
+
+        function mudarAba(aba) {
+            ['dashboard', 'cardapio', 'vendas_online', 'biblioteca_adicionais', 'estoque', 'pdv', 'cozinha', 'caixa', 'config_firebase'].forEach(t => {
+                const tabEl = document.getElementById(`tab-${t}`);
+                if(tabEl) tabEl.classList.add('hidden');
+                const btn = document.getElementById(`btn-${t}`);
+                if(btn) {
+                    btn.classList.remove('bg-red-600', 'text-white', 'shadow-lg', 'shadow-red-600/30');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            const tabAtiva = document.getElementById(`tab-${aba}`);
+            if(tabAtiva) tabAtiva.classList.remove('hidden');
+            
+            const btnAtivo = document.getElementById(`btn-${aba}`);
+            if(btnAtivo) {
+                btnAtivo.classList.add('bg-red-600', 'text-white', 'shadow-lg', 'shadow-red-600/30');
+                btnAtivo.classList.remove('text-slate-400');
+            }
+            document.getElementById('titulo-topo').innerText = titulos[aba] || 'Painel Gestor';
+
+            verificarAlertasEstoque();
+            atualizarContadorCozinha();
+            atualizarDashboard();
+            renderizarBibliotecaAdicionais();
+            renderizarCheckboxesCadastroPrato();
+            atualizarSelectPratoOrigemCopia();
+            renderizarCardapio();
+            renderizarPratosOnline();
+            renderizarEstoque();
+            carregarSelectsPDV();
+            renderizarCozinha();
+            renderizarCaixa();
+        }
+
+        function salvarDadosLocal() {
+            localStorage.setItem('mp_cardapio', JSON.stringify(cardapio));
+            localStorage.setItem('mp_estoque', JSON.stringify(estoque));
+            localStorage.setItem('mp_pedidos', JSON.stringify(pedidos));
+            localStorage.setItem('mp_caixa', JSON.stringify(caixa));
+            localStorage.setItem('mp_biblioteca_adicionais', JSON.stringify(bibliotecaAdicionais));
+            verificarAlertasEstoque();
+            atualizarContadorCozinha();
+        }
+
+        function salvarAdicionalGlobal(e) {
+            e.preventDefault();
+            const titulo = document.getElementById('global-ad-titulo').value.trim();
+            const nome = document.getElementById('global-ad-nome').value.trim();
+            const preco = parseFloat(document.getElementById('global-ad-preco').value) || 0;
+
+            if(!titulo || !nome) return;
+
+            const novoAd = { id: Date.now(), titulo, nome, preco };
+            bibliotecaAdicionais.push(novoAd);
+
+            salvarDadosLocal();
+            salvarNoFirebase('bibliotecaAdicionais', novoAd.id, novoAd);
+
+            renderizarBibliotecaAdicionais();
+            renderizarCheckboxesCadastroPrato();
+
+            document.getElementById('global-ad-titulo').value = '';
+            document.getElementById('global-ad-nome').value = '';
+            document.getElementById('global-ad-preco').value = '';
+            alert('Adicional salvo com sucesso!');
+        }
+
+        function renderizarBibliotecaAdicionais() {
+            const tb = document.getElementById('tabela-biblioteca-adicionais');
+            if(!tb) return;
+            tb.innerHTML = '';
+
+            if(bibliotecaAdicionais.length === 0) {
+                tb.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400 italic">Nenhum adicional cadastrado.</td></tr>';
+                return;
+            }
+
+            bibliotecaAdicionais.forEach((ad, index) => {
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="px-3 py-2 font-semibold text-amber-900"><span class="bg-amber-100 px-2 py-0.5 rounded-full text-[10px]">${ad.titulo || 'Geral'}</span></td>
+                        <td class="px-3 py-2 font-bold text-slate-800">${ad.nome}</td>
+                        <td class="px-3 py-2 font-extrabold text-emerald-600">R$ ${ad.preco.toFixed(2)}</td>
+                        <td class="px-3 py-2 text-center space-x-2">
+                            <button onclick="abrirModalEditarAdicional(${index})" class="bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold text-[10px] transition">Editar</button>
+                            <button onclick="excluirAdicionalGlobal(${ad.id})" class="px-2 py-0.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function abrirModalEditarAdicional(index) {
+            const ad = bibliotecaAdicionais[index];
+            if(!ad) return;
+
+            document.getElementById('edit-ad-id').value = index;
+            document.getElementById('edit-ad-titulo').value = ad.titulo || '';
+            document.getElementById('edit-ad-nome').value = ad.nome;
+            document.getElementById('edit-ad-preco').value = ad.preco;
+
+            document.getElementById('modal-editar-adicional').classList.remove('hidden');
+        }
+
+        function fecharModalEditarAdicional() {
+            document.getElementById('modal-editar-adicional').classList.add('hidden');
+        }
+
+        function salvarEdicaoAdicionalGlobal() {
+            const index = parseInt(document.getElementById('edit-ad-id').value);
+            const novoTitulo = document.getElementById('edit-ad-titulo').value.trim();
+            const novoNome = document.getElementById('edit-ad-nome').value.trim();
+            const novoPreco = parseFloat(document.getElementById('edit-ad-preco').value);
+
+            if(!novoTitulo || !novoNome || isNaN(novoPreco)) {
+                return alert('Preencha todos os campos corretamente!');
+            }
+
+            if(bibliotecaAdicionais[index]) {
+                const adObj = bibliotecaAdicionais[index];
+                adObj.titulo = novoTitulo;
+                adObj.nome = novoNome;
+                adObj.preco = novoPreco;
+
+                salvarDadosLocal();
+                salvarNoFirebase('bibliotecaAdicionais', adObj.id, adObj);
+
+                renderizarBibliotecaAdicionais();
+                renderizarCheckboxesCadastroPrato();
+                renderizarCardapio();
+                renderizarPratosOnline();
+                fecharModalEditarAdicional();
+                alert('Adicional atualizado com sucesso!');
+            }
+        }
+
+        function excluirAdicionalGlobal(id) {
+            if(confirm('Deseja excluir este adicional?')) {
+                bibliotecaAdicionais = bibliotecaAdicionais.filter(a => a.id !== id);
+                salvarDadosLocal();
+                excluirDoFirebase('bibliotecaAdicionais', id);
+                renderizarBibliotecaAdicionais();
+                renderizarCheckboxesCadastroPrato();
+            }
+        }
+
+        function renderizarCheckboxesCadastroPrato(vinculadosIds = []) {
+            const container = document.getElementById('container-checkbox-adicionais');
+            if(!container) return;
+            container.innerHTML = '';
+
+            if(bibliotecaAdicionais.length === 0) {
+                container.innerHTML = '<p class="text-[10px] text-slate-400 italic col-span-4">Cadastre adicionais na aba "Biblioteca de Adicionais" primeiro.</p>';
+                return;
+            }
+
+            const grupos = {};
+            bibliotecaAdicionais.forEach(ad => {
+                const grupoTitulo = ad.titulo || 'Adicionais';
+                if(!grupos[grupoTitulo]) grupos[grupoTitulo] = [];
+                grupos[grupoTitulo].push(ad);
+            });
+
+            Object.keys(grupos).forEach(tituloGrupo => {
+                let itensHtml = '';
+                grupos[tituloGrupo].forEach(ad => {
+                    const marcado = vinculadosIds.includes(ad.id) ? 'checked' : '';
+                    itensHtml += `
+                        <label class="flex items-center space-x-2 bg-white p-2 rounded-lg border border-amber-200 cursor-pointer hover:border-amber-400 transition">
+                            <input type="checkbox" value="${ad.id}" ${marcado} class="check-adicional-prato rounded text-red-600 focus:ring-red-500 w-4 h-4">
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-bold text-slate-800 truncate">${ad.nome}</p>
+                                <p class="text-[10px] font-extrabold text-emerald-600">+ R$ ${ad.preco.toFixed(2)}</p>
+                            </div>
+                        </label>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <div class="space-y-1 pt-1">
+                        <p class="font-extrabold text-[11px] text-amber-900 uppercase tracking-wide bg-amber-200/60 px-2 py-0.5 rounded">${tituloGrupo}</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">${itensHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function atualizarSelectPratoOrigemCopia() {
+            const sel = document.getElementById('select-prato-origem-copia');
+            if(!sel) return;
+            sel.innerHTML = '<option value="">-- Selecione um prato para copiar os adicionais --</option>';
+
+            cardapio.forEach(p => {
+                if(p.adicionais && p.adicionais.length > 0) {
+                    sel.innerHTML += `<option value="${p.id}">${p.nome} (${p.adicionais.length} adicionais)</option>`;
+                }
+            });
+        }
+
+        function copiarAdicionaisDeOutroPrato() {
+            const idOrigem = parseInt(document.getElementById('select-prato-origem-copia').value);
+            if(!idOrigem) return alert('Selecione um prato de origem valido!');
+
+            const pratoOrigem = cardapio.find(p => p.id === idOrigem);
+            if(!pratoOrigem || !pratoOrigem.adicionais) return alert('Este prato nao possui adicionais cadastrados.');
+
+            const idsParaMarcar = pratoOrigem.adicionais.map(a => a.id);
+            renderizarCheckboxesCadastroPrato(idsParaMarcar);
+            alert(`Adicionais copiados com sucesso!`);
+        }
+
+        function atualizarContadorCozinha() {
+            const hojeStr = obterDataAtualStr();
+            const emPreparo = pedidos.filter(p => {
+                const dataPedido = new Date(p.id).toLocaleDateString('pt-BR');
+                return dataPedido === hojeStr && (p.status === 'pendente' || p.status === 'preparacao' || p.status === 'entrega');
+            }).length;
+            const badge = document.getElementById('badge-pedidos-cozinha');
+            if(badge) badge.innerText = emPreparo;
+        }
+
+        function atualizarDashboard() {
+            const hojeStr = obterDataAtualStr();
+            const dMesAtual = new Date().getMonth();
+            const dAnoAtual = new Date().getFullYear();
+
+            let brutoHoje = 0, despesasHoje = 0, qtdPedidosHoje = 0;
+            let brutoMensal = 0;
+
+            caixa.forEach(c => {
+                const dataParte = c.data.split(',')[0].trim();
+                const partesData = dataParte.split('/');
+                
+                if (partesData.length === 3) {
+                    const mesC = parseInt(partesData[1]) - 1;
+                    const anoC = parseInt(partesData[2]);
+
+                    if (mesC === dMesAtual && anoC === dAnoAtual) {
+                        if(c.tipo === 'ENTRADA') brutoMensal += c.valor;
+                    }
+
+                    if (dataParte === hojeStr) {
+                        if(c.tipo === 'ENTRADA') brutoHoje += c.valor;
+                        if(c.tipo === 'SAIDA') despesasHoje += c.valor;
+                    }
+                }
+            });
+
+            pedidos.forEach(p => {
+                const dataP = new Date(p.id).toLocaleDateString('pt-BR');
+                if (dataP === hojeStr && p.status !== 'cancelado') {
+                    qtdPedidosHoje++;
+                }
+            });
+
+            document.getElementById('dash-faturamento').innerText = `R$ ${brutoHoje.toFixed(2)}`;
+            document.getElementById('dash-mensal').innerText = `R$ ${brutoMensal.toFixed(2)}`;
+            document.getElementById('dash-pedidos').innerText = qtdPedidosHoje;
+            document.getElementById('dash-lucro').innerText = `R$ ${(brutoHoje - despesasHoje).toFixed(2)}`;
+        }
+
+        function consultarFaturamentoHistorico() {
+            const dataInput = document.getElementById('filtro-data-historico').value;
+            if(!dataInput) return alert('Selecione uma data para consultar!');
+
+            const partes = dataInput.split('-');
+            const dataBusca = `${partes[2]}/${partes[1]}/${partes[0]}`;
+
+            let totalBruto = 0;
+            let qtd = 0;
+
+            caixa.forEach(c => {
+                const dataParte = c.data.split(',')[0].trim();
+                if(dataParte === dataBusca && c.tipo === 'ENTRADA') {
+                    totalBruto += c.valor;
+                    qtd++;
+                }
+            });
+
+            const box = document.getElementById('resultado-historico-box');
+            box.classList.remove('hidden');
+            document.getElementById('resultado-historico-titulo').innerText = `Faturamento em ${dataBusca}:`;
+            document.getElementById('resultado-historico-valor').innerText = `R$ ${totalBruto.toFixed(2)}`;
+            document.getElementById('resultado-historico-qtd').innerText = `${qtd} vendas/pedidos`;
+        }
+
+        function consultarFaturamentoUltimosDias(dias) {
+            const hoje = new Date();
+            let totalBruto = 0;
+            let totalVendas = 0;
+
+            for(let i = 0; i < dias; i++) {
+                let d = new Date();
+                d.setDate(hoje.getDate() - i);
+                let dataStr = obterDataAtualStr(d);
+
+                caixa.forEach(c => {
+                    const dataParte = c.data.split(',')[0].trim();
+                    if(dataParte === dataStr && c.tipo === 'ENTRADA') {
+                        totalBruto += c.valor;
+                        totalVendas++;
+                    }
+                });
+            }
+
+            const box = document.getElementById('resultado-historico-box');
+            box.classList.remove('hidden');
+            document.getElementById('resultado-historico-titulo').innerText = `Faturamento acumulado (Ultimos ${dias} dias):`;
+            document.getElementById('resultado-historico-valor').innerText = `R$ ${totalBruto.toFixed(2)}`;
+            document.getElementById('resultado-historico-qtd').innerText = `${totalVendas} vendas/pedidos`;
+        }
+
+        function limparFiltroHistorico() {
+            document.getElementById('filtro-data-historico').value = '';
+            document.getElementById('resultado-historico-box').classList.add('hidden');
+            atualizarDashboard();
+        }
+
+        function salvarPrato(e) {
+            e.preventDefault();
+            const novoPrato = {
+                id: Date.now(),
+                nome: document.getElementById('prato-nome').value,
+                categoria: document.getElementById('prato-categoria').value,
+                tamanho: document.getElementById('prato-tamanho').value,
+                preco: parseFloat(document.getElementById('prato-preco').value),
+                descricao: 'Prato sem descricao cadastrada.',
+                adicionais: [],
+                fotoUrl: 'https://via.placeholder.com/150?text=Sem+Foto',
+                visivelOnline: true
+            };
+            cardapio.push(novoPrato);
+            salvarDadosLocal();
+            salvarNoFirebase('cardapio', novoPrato.id, novoPrato);
+
+            renderizarCardapio();
+            renderizarPratosOnline();
+            carregarSelectsPDV();
+            atualizarSelectPratoOrigemCopia();
+            document.getElementById('prato-nome').value = '';
+            document.getElementById('prato-tamanho').value = '';
+            document.getElementById('prato-preco').value = '';
+        }
+
+        function cadastrarProdutoCompleto(e) {
+            e.preventDefault();
+
+            const nome = document.getElementById('online-nome').value;
+            const categoria = document.getElementById('online-categoria').value;
+            const preco = parseFloat(document.getElementById('online-preco').value) || 0;
+            const tamanho = document.getElementById('online-tamanho').value;
+            const descricao = document.getElementById('online-descricao').value;
+            const fileInput = document.getElementById('online-foto-file');
+
+            let adicionaisSelecionados = [];
+            const checkboxes = document.querySelectorAll('.check-adicional-prato:checked');
+            checkboxes.forEach(cb => {
+                const idAd = parseInt(cb.value);
+                const objAd = bibliotecaAdicionais.find(a => a.id === idAd);
+                if(objAd) {
+                    adicionaisSelecionados.push({ id: objAd.id, titulo: objAd.titulo, nome: objAd.nome, preco: objAd.preco });
+                }
+            });
+
+            const finalizar = (fotoData) => {
+                const novoPrato = {
+                    id: Date.now(),
+                    nome, categoria, preco, tamanho, descricao,
+                    adicionais: adicionaisSelecionados,
+                    fotoUrl: fotoData || 'https://via.placeholder.com/150?text=Sem+Foto',
+                    visivelOnline: true
+                };
+
+                cardapio.push(novoPrato);
+                salvarDadosLocal();
+                salvarNoFirebase('cardapio', novoPrato.id, novoPrato);
+
+                renderizarPratosOnline();
+                renderizarCardapio();
+                carregarSelectsPDV();
+                atualizarSelectPratoOrigemCopia();
+
+                document.getElementById('online-nome').value = '';
+                document.getElementById('online-preco').value = '';
+                document.getElementById('online-tamanho').value = '';
+                document.getElementById('online-descricao').value = '';
+                fileInput.value = '';
+                renderizarCheckboxesCadastroPrato();
+
+                alert('Produto cadastrado com sucesso!');
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (evt) { finalizar(evt.target.result); };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                finalizar(null);
+            }
+        }
+
+        function renderizarCardapio() {
+            const tb = document.getElementById('tabela-cardapio');
+            if(!tb) return;
+            tb.innerHTML = '';
+            cardapio.forEach(item => {
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="px-3 py-2"><img src="${item.fotoUrl}" class="w-8 h-8 rounded object-cover border border-slate-200"></td>
+                        <td class="px-3 py-2 font-semibold text-slate-800 break-words">${item.nome}</td>
+                        <td class="px-3 py-2 text-slate-600">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium bg-slate-100 text-slate-800">
+                                ${item.categoria}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-slate-600 font-medium">${item.tamanho}</td>
+                        <td class="px-3 py-2 font-extrabold text-emerald-600 whitespace-nowrap">R$ ${item.preco.toFixed(2)}</td>
+                        <td class="px-3 py-2 text-center space-x-1 whitespace-nowrap">
+                            <button onclick="abrirModalEditar(${item.id})" class="px-2 py-0.5 text-[10px] font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition">Editar</button>
+                            <button onclick="excluirPrato(${item.id})" class="px-2 py-0.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderizarPratosOnline() {
+            const box = document.getElementById('container-pratos-online');
+            if(!box) return;
+            box.innerHTML = '';
+
+            if(cardapio.length === 0) {
+                box.innerHTML = '<p class="text-slate-400 italic text-[11px] col-span-2">Nenhum produto cadastrado ainda.</p>';
+                return;
+            }
+
+            cardapio.forEach(p => {
+                const adList = p.adicionais && p.adicionais.length > 0 ? p.adicionais.map(a => `<span class="bg-amber-100 text-amber-900 text-[9px] px-1.5 py-0.5 rounded font-bold">[${a.titulo || 'Geral'}] ${a.nome} (+R$ ${a.preco.toFixed(2)})</span>`).join(' ') : '<span class="text-slate-400 text-[9px]">Nenhum adicional</span>';
+                
+                box.innerHTML += `
+                    <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-2 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center space-x-2.5">
+                                <img src="${p.fotoUrl || 'https://via.placeholder.com/50'}" class="w-12 h-12 rounded-lg object-cover border border-slate-300">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-xs">${p.nome}</h4>
+                                    <span class="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">${p.categoria} • ${p.tamanho}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <label class="flex items-center space-x-1 cursor-pointer">
+                                    <input type="checkbox" onchange="toggleVisibilidadeOnline(${p.id}, this.checked)" ${p.visivelOnline !== false ? 'checked' : ''} class="rounded text-emerald-600">
+                                    <span class="text-[10px] font-bold ${p.visivelOnline !== false ? 'text-emerald-600' : 'text-slate-400'}">${p.visivelOnline !== false ? 'Visivel' : 'Oculto'}</span>
+                                </label>
+                                <button onclick="excluirPrato(${p.id})" class="text-rose-600 font-bold hover:underline text-[10px]">Excluir 🗑️</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase">Descricao:</label>
+                            <textarea onchange="atualizarDescricaoPrato(${p.id}, this.value)" rows="2" class="w-full border border-slate-300 p-1.5 rounded-lg text-[10px] bg-white">${p.descricao || ''}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Adicionais Vinculados:</label>
+                            <div class="flex flex-wrap gap-1">${adList}</div>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-1 border-t border-slate-200">
+                            <div class="flex items-center space-x-1">
+                                <span class="text-[10px] text-slate-500 font-bold">Preco R$:</span>
+                                <input type="number" step="0.01" value="${p.preco}" onchange="atualizarPrecoPrato(${p.id}, this.value)" class="w-20 border border-slate-300 p-1 rounded text-[10px] font-extrabold text-emerald-600 bg-white">
+                            </div>
+                            <button onclick="abrirModalEditar(${p.id})" class="bg-blue-50 text-blue-700 font-bold px-2 py-1 rounded text-[10px] border border-blue-200">⚙️ Editar Adicionais</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleVisibilidadeOnline(id, visible) {
+            const item = cardapio.find(i => i.id === id);
+            if(item) { item.visivelOnline = visible; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); }
+        }
+
+        function atualizarDescricaoPrato(id, desc) {
+            const item = cardapio.find(i => i.id === id);
+            if(item) { item.descricao = desc; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); }
+        }
+
+        function atualizarPrecoPrato(id, val) {
+            const item = cardapio.find(i => i.id === id);
+            if(item) { item.preco = parseFloat(val) || 0; salvarDadosLocal(); salvarNoFirebase('cardapio', item.id, item); renderizarCardapio(); carregarSelectsPDV(); }
+        }
+
+        function excluirPrato(id) {
+            if(confirm('Tem certeza que deseja excluir este produto?')) {
+                cardapio = cardapio.filter(i => i.id !== id);
+                salvarDadosLocal();
+                excluirDoFirebase('cardapio', id);
+                renderizarCardapio(); renderizarPratosOnline(); carregarSelectsPDV(); atualizarSelectPratoOrigemCopia();
+            }
+        }
+
+        function abrirModalEditar(id) {
+            const item = cardapio.find(i => i.id === id);
+            if(!item) return;
+
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-nome').value = item.nome;
+            document.getElementById('edit-categoria').value = item.categoria;
+            document.getElementById('edit-tamanho').value = item.tamanho;
+            document.getElementById('edit-preco').value = item.preco;
+
+            const containerEdit = document.getElementById('edit-container-checkbox-adicionais');
+            containerEdit.innerHTML = '';
+
+            const idsVinculados = item.adicionais ? item.adicionais.map(a => a.id) : [];
+
+            if(bibliotecaAdicionais.length === 0) {
+                containerEdit.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum adicional na biblioteca.</p>';
+            } else {
+                const grupos = {};
+                bibliotecaAdicionais.forEach(ad => {
+                    const grupoTitulo = ad.titulo || 'Adicionais';
+                    if(!grupos[grupoTitulo]) grupos[grupoTitulo] = [];
+                    grupos[grupoTitulo].push(ad);
+                });
+
+                Object.keys(grupos).forEach(tituloGrupo => {
+                    let itensHtml = '';
+                    grupos[tituloGrupo].forEach(ad => {
+                        const marcado = idsVinculados.includes(ad.id) ? 'checked' : '';
+                        itensHtml += `
+                            <label class="flex items-center space-x-2 bg-white p-2 rounded border border-slate-200 cursor-pointer">
+                                <input type="checkbox" value="${ad.id}" ${marcado} class="check-adicional-edit rounded text-blue-600 w-3.5 h-3.5">
+                                <span class="text-[11px] font-bold text-slate-800">${ad.nome} (+R$ ${ad.preco.toFixed(2)})</span>
+                            </label>
+                        `;
+                    });
+
+                    containerEdit.innerHTML += `
+                        <div class="space-y-1">
+                            <p class="font-extrabold text-[10px] text-amber-900 uppercase bg-amber-100 px-2 py-0.5 rounded">${tituloGrupo}</p>
+                            <div class="grid grid-cols-2 gap-2">${itensHtml}</div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('modal-editar').classList.remove('hidden');
+        }
+
+        function fecharModalEditar() { document.getElementById('modal-editar').classList.add('hidden'); }
+
+        function salvarEdicaoPrato() {
+            const id = parseInt(document.getElementById('edit-id').value);
+            const item = cardapio.find(i => i.id === id);
+            if(item) {
+                item.nome = document.getElementById('edit-nome').value;
+                item.categoria = document.getElementById('edit-categoria').value;
+                item.tamanho = document.getElementById('edit-tamanho').value;
+                item.preco = parseFloat(document.getElementById('edit-preco').value);
+
+                let novosAdicionais = [];
+                const checks = document.querySelectorAll('.check-adicional-edit:checked');
+                checks.forEach(cb => {
+                    const idAd = parseInt(cb.value);
+                    const objAd = bibliotecaAdicionais.find(a => a.id === idAd);
+                    if(objAd) {
+                        novosAdicionais.push({ id: objAd.id, titulo: objAd.titulo, nome: objAd.nome, preco: objAd.preco });
+                    }
+                });
+                item.adicionais = novosAdicionais;
+
+                salvarDadosLocal();
+                salvarNoFirebase('cardapio', item.id, item);
+
+                renderizarCardapio(); 
+                renderizarPratosOnline(); 
+                carregarSelectsPDV(); 
+                atualizarSelectPratoOrigemCopia();
+                fecharModalEditar();
+                alert('Prato atualizado com sucesso!');
+            }
+        }
+
+        function salvarItemEstoque(e) {
+            e.preventDefault();
+            const novoEst = {
+                id: Date.now(),
+                nome: document.getElementById('est-nome').value,
+                categoria: document.getElementById('est-categoria').value,
+                qtd: parseInt(document.getElementById('est-qtd').value),
+                min: parseInt(document.getElementById('est-min').value)
+            };
+            estoque.push(novoEst);
+            salvarDadosLocal();
+            salvarNoFirebase('estoque', novoEst.id, novoEst);
+
+            renderizarEstoque();
+            document.getElementById('est-nome').value = '';
+            document.getElementById('est-qtd').value = '';
+            document.getElementById('est-min').value = '';
+        }
+
+        function renderizarEstoque() {
+            const tb = document.getElementById('tabela-estoque');
+            if(!tb) return;
+            tb.innerHTML = '';
+            estoque.forEach(i => {
+                const alerta = i.qtd <= i.min;
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100 ${alerta ? 'bg-rose-50/40' : ''}">
+                        <td class="px-3 py-2 font-semibold text-slate-800 break-words">${i.nome}</td>
+                        <td class="px-3 py-2 text-slate-600">${i.categoria}</td>
+                        <td class="px-3 py-2 font-extrabold ${alerta ? 'text-rose-600' : 'text-slate-800'}">${i.qtd}</td>
+                        <td class="px-3 py-2 text-slate-600">${i.min}</td>
+                        <td class="px-3 py-2 font-bold text-[9px]">${alerta ? '<span class="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">⚠️ ACABANDO</span>' : '<span class="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">🟢 OK</span>'}</td>
+                        <td class="px-3 py-2 text-center space-x-1 whitespace-nowrap">
+                            <button onclick="ajustarEstoque(${i.id}, 1)" class="bg-slate-200 hover:bg-slate-300 px-1.5 py-0.5 rounded font-bold text-[9px]">+1</button>
+                            <button onclick="ajustarEstoque(${i.id}, -1)" class="bg-slate-200 hover:bg-slate-300 px-1.5 py-0.5 rounded font-bold text-[9px]">-1</button>
+                            <button onclick="excluirEstoque(${i.id})" class="text-rose-600 font-semibold hover:underline text-[10px] ml-1">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function ajustarEstoque(id, delta) {
+            const item = estoque.find(i => i.id === id);
+            if(item) { 
+                item.qtd = Math.max(0, item.qtd + delta); 
+                salvarDadosLocal(); 
+                salvarNoFirebase('estoque', item.id, item);
+                renderizarEstoque(); 
+            }
+        }
+
+        function excluirEstoque(id) {
+            estoque = estoque.filter(i => i.id !== id);
+            salvarDadosLocal();
+            excluirDoFirebase('estoque', id);
+            renderizarEstoque();
+        }
+
+        function verificarAlertasEstoque() {
+            const comAlerta = estoque.some(i => i.qtd <= i.min);
+            const box = document.getElementById('alerta-estoque-topo');
+            if(box) {
+                if(comAlerta) box.classList.remove('hidden'); else box.classList.add('hidden');
+            }
+        }
+
+        function carregarSelectsPDV() {
+            const selCuscuz = document.getElementById('pdv-select-cuscuz');
+            const selMarmita = document.getElementById('pdv-select-marmita');
+            const selSobremesa = document.getElementById('pdv-select-sobremesa');
+            const selBebida = document.getElementById('pdv-select-bebida');
+
+            if(!selCuscuz || !selMarmita || !selSobremesa || !selBebida) return;
+
+            selCuscuz.innerHTML = '<option value="">-- Selecione o Cuscuz --</option>';
+            selMarmita.innerHTML = '<option value="">-- Selecione a Marmita --</option>';
+            selSobremesa.innerHTML = '<option value="">-- Selecione a Sobremesa --</option>';
+            selBebida.innerHTML = '<option value="">-- Selecione a Bebida / Outros --</option>';
+
+            cardapio.forEach(p => {
+                const opt = `<option value="${p.id}">${p.nome} (${p.tamanho}) - R$ ${p.preco.toFixed(2)}</option>`;
+                if(p.categoria === 'Cuscuz') {
+                    selCuscuz.innerHTML += opt;
+                } else if(p.categoria === 'Marmita') {
+                    selMarmita.innerHTML += opt;
+                } else if(p.categoria === 'Sobremesa') {
+                    selSobremesa.innerHTML += opt;
+                } else {
+                    selBebida.innerHTML += opt;
+                }
+            });
+        }
+
+        function adicionarItemPorSelect(selectId, qtdId) {
+            const sel = document.getElementById(selectId);
+            if(!sel || !sel.value) return alert('Selecione um item valido dessa categoria!');
+
+            const id = parseInt(sel.value);
+            const qtd = parseInt(document.getElementById(qtdId).value) || 1;
+            const item = cardapio.find(i => i.id === id);
+            if(!item) return;
+
+            carrinho.push({ ...item, qtdCarrinho: qtd, totalItem: item.preco * qtd });
+            renderizarCarrinho();
+            sel.value = '';
+        }
+
+        function renderizarCarrinho() {
+            const box = document.getElementById('carrinho-itens');
+            if(!box) return;
+            box.innerHTML = '';
+            if(carrinho.length === 0) {
+                box.innerHTML = '<p class="text-[11px] text-slate-400 italic">Nenhum produto adicionado.</p>';
+                atualizarTotalPDV(); return;
+            }
+            carrinho.forEach((c, idx) => {
+                box.innerHTML += `
+                    <div class="flex justify-between items-center py-1 text-[11px]">
+                        <div>
+                            <p class="font-bold text-slate-800">${c.nome} (${c.tamanho})</p>
+                            <p class="text-slate-500">${c.qtdCarrinho}x R$ ${c.preco.toFixed(2)}</p>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="font-extrabold text-slate-800">R$ ${c.totalItem.toFixed(2)}</span>
+                            <button onclick="removerItemCarrinho(${idx})" class="text-rose-600 font-bold">✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+            atualizarTotalPDV();
+        }
+
+        function removerItemCarrinho(idx) {
+            carrinho.splice(idx, 1);
+            renderizarCarrinho();
+        }
+
+        function atualizarTotalPDV() {
+            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
+            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
+            const totalEl = document.getElementById('pdv-total-txt');
+            if(totalEl) totalEl.innerText = `R$ ${(subtotal + taxa).toFixed(2)}`;
+            calcularTroco();
+        }
+
+        function toggleTroco(val) {
+            const box = document.getElementById('box-troco');
+            if(box) {
+                if(val === 'DINHEIRO') box.classList.remove('hidden'); else box.classList.add('hidden');
+            }
+        }
+
+        function calcularTroco() {
+            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
+            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
+            const total = subtotal + taxa;
+            const pago = parseFloat(document.getElementById('pdv-valor-pago').value) || 0;
+            const troco = pago - total;
+            const txt = document.getElementById('pdv-troco-txt');
+            if(txt) {
+                if(troco >= 0) {
+                    txt.innerText = `Troco: R$ ${troco.toFixed(2)}`;
+                    txt.className = 'text-[11px] font-bold text-emerald-700';
+                } else {
+                    txt.innerText = `Faltam: R$ ${Math.abs(troco).toFixed(2)}`;
+                    txt.className = 'text-[11px] font-bold text-rose-600';
+                }
+            }
+        }
+
+        function imprimirComanda(pedido) {
+            const dataHora = new Date(pedido.id).toLocaleString('pt-BR');
+            let trocoTxt = '';
+            
+            if(pedido.pagamento === 'DINHEIRO' && pedido.trocoInfo) {
+                const valorPago = parseFloat(pedido.trocoInfo) || 0;
+                const troco = valorPago - pedido.total;
+                if(troco > 0) {
+                    trocoTxt = `<br>Troco para: R$ ${valorPago.toFixed(2)} (Troco: R$ ${troco.toFixed(2)})`;
+                }
+            }
+
+            let tabelaItensHtml = '';
+            pedido.itens.forEach(i => {
+                tabelaItensHtml += `
+                    <tr>
+                        <td style="padding: 3px 0; vertical-align: top;"><b>${i.qtdCarrinho}x</b></td>
+                        <td style="padding: 3px 0; vertical-align: top;">${i.nome} (${i.tamanho})</td>
+                        <td style="padding: 3px 0; text-align: right; vertical-align: top;">R$ ${i.totalItem.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            const comandaBox = document.getElementById('comanda-impressao');
+            comandaBox.innerHTML = `
+                <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+                    <h2 style="font-size: 14px; font-weight: bold; margin: 0;">VIXE MAINHA</h2>
+                    <p style="font-size: 10px; margin: 2px 0;">Marmitaria & Cuscuzeria Pro</p>
+                    <p style="font-size: 9px; margin: 0;">--------------------------------</p>
+                    <h3 style="font-size: 16px; font-weight: bold; margin: 4px 0;">PEDIDO #${pedido.numero}</h3>
+                    <p style="font-size: 9px; margin: 0;">Data: ${dataHora}</p>
+                </div>
+
+                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+                    <p style="margin: 2px 0;"><b>CLIENTE:</b> ${pedido.cliente.toUpperCase()}</p>
+                    <p style="margin: 2px 0;"><b>TEL:</b> ${pedido.tel || 'Nao informado'}</p>
+                    <p style="margin: 2px 0;"><b>ENDERECO:</b> ${pedido.end}</p>
+                </div>
+
+                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+                    <p style="font-weight: bold; margin-bottom: 4px;">ITENS DO PEDIDO:</p>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        ${tabelaItensHtml}
+                    </table>
+                </div>
+
+                <div style="border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+                    <table style="width: 100%; font-size: 11px;">
+                        <tr>
+                            <td>Subtotal:</td>
+                            <td style="text-align: right;">R$ ${(pedido.total - pedido.taxa).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                            <td>Taxa de Entrega:</td>
+                            <td style="text-align: right;">R$ ${pedido.taxa.toFixed(2)}</td>
+                        </tr>
+                        <tr style="font-weight: bold; font-size: 13px;">
+                            <td style="padding-top: 4px;">TOTAL:</td>
+                            <td style="text-align: right; padding-top: 4px;">R$ ${pedido.total.toFixed(2)}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="text-align: center; padding-top: 2px;">
+                    <p style="font-size: 11px; font-weight: bold; margin: 2px 0;">PAGAMENTO: ${pedido.pagamento}${trocoTxt}</p>
+                    <p style="font-size: 9px; margin-top: 8px;">Obrigado pela preferencia!</p>
+                </div>
+            `;
+
+            window.print();
+        }
+
+        function finalizarPedidoPDV() {
+            const cliente = document.getElementById('pdv-cliente').value;
+            const tel = document.getElementById('pdv-tel').value;
+            const end = document.getElementById('pdv-end').value;
+            const pagamento = document.getElementById('pdv-pagamento').value;
+            const taxa = parseFloat(document.getElementById('pdv-taxa').value) || 0;
+
+            if(!cliente || !end || carrinho.length === 0) return alert('Preencha cliente, endereco e adicione itens no carrinho!');
+
+            const subtotal = carrinho.reduce((acc, i) => acc + i.totalItem, 0);
+            const total = subtotal + taxa;
+
+            const novoPedido = {
+                id: Date.now(),
+                numero: pedidos.length + 101,
+                cliente, tel, end,
+                itens: [...carrinho],
+                taxa, total, pagamento,
+                status: 'preparacao'
+            };
+
+            pedidos.push(novoPedido);
+            salvarDadosLocal();
+            salvarNoFirebase('pedidos', novoPedido.id, novoPedido);
+
+            const novoCaixa = {
+                id: Date.now(),
+                data: new Date().toLocaleString('pt-BR'),
+                tipo: 'ENTRADA',
+                descricao: `Venda Pedido #${novoPedido.numero} - ${cliente}`,
+                pagamento,
+                valor: total,
+                taxa
+            };
+            caixa.unshift(novoCaixa);
+            salvarDadosLocal();
+            salvarNoFirebase('caixa', novoCaixa.id, novoCaixa);
+
+            imprimirComanda(novoPedido);
+
+            carrinho = [];
+            document.getElementById('pdv-cliente').value = '';
+            document.getElementById('pdv-tel').value = '';
+            document.getElementById('pdv-end').value = '';
+            document.getElementById('pdv-valor-pago').value = '';
+            renderizarCarrinho();
+            mudarAba('cozinha');
+        }
+
+        function renderizarCozinha(dataFiltroCustom = null) {
+            const colunas = ['pendente', 'preparacao', 'entrega', 'finalizado'];
+            const hojeStr = obterDataAtualStr();
+            const dataAlvo = dataFiltroCustom || hojeStr;
+
+            if(dataFiltroCustom) {
+                document.getElementById('titulo-cozinha-status').innerText = `Exibindo Comandas do dia: ${dataFiltroCustom}`;
+            } else {
+                document.getElementById('titulo-cozinha-status').innerText = `Exibindo Comandas de Hoje (${hojeStr})`;
+            }
+            
+            colunas.forEach(st => {
+                const box = document.getElementById(`coluna-${st}`);
+                const countBadge = document.getElementById(`count-${st}`);
+                if(!box) return;
+                
+                box.innerHTML = '';
+                
+                const filtrados = pedidos.filter(p => {
+                    const dataPedido = new Date(p.id).toLocaleDateString('pt-BR');
+                    if (dataFiltroCustom) {
+                        return dataPedido === dataAlvo && p.status === st;
+                    } else {
+                        if (st === 'finalizado') {
+                            return dataPedido === hojeStr && p.status === st;
+                        } else {
+                            return p.status === st;
+                        }
+                    }
+                });
+                
+                if(countBadge) countBadge.innerText = filtrados.length;
+
+                if(filtrados.length === 0) {
+                    box.innerHTML = '<p class="text-[11px] text-slate-400 italic text-center py-6">Nenhum pedido nesta fase.</p>';
+                    return;
+                }
+
+                filtrados.forEach(p => {
+                    let htmlItensCard = '';
+                    p.itens.forEach(it => {
+                        htmlItensCard += `
+                            <div class="flex justify-between items-center text-[11px] py-1 border-b border-slate-100 last:border-0">
+                                <span class="font-bold text-slate-800">● ${it.qtdCarrinho}x ${it.nome} <span class="text-slate-500 font-normal">(${it.tamanho})</span></span>
+                                <span class="font-semibold text-slate-600">R$ ${it.totalItem.toFixed(2)}</span>
+                            </div>
+                        `;
+                    });
+
+                    let trocoStr = '';
+                    if(p.pagamento === 'DINHEIRO' && p.trocoInfo) {
+                        const vPago = parseFloat(p.trocoInfo) || 0;
+                        const vTroco = vPago - p.total;
+                        trocoStr = ` (Troco p/ R$ ${vPago.toFixed(2)} ➔ Troco: R$ ${vTroco.toFixed(2)})`;
+                    }
+
+                    box.innerHTML += `
+                        <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden flex flex-col justify-between hover:shadow-lg transition">
+                            <div class="bg-slate-900 text-white p-2.5 flex justify-between items-center">
+                                <div>
+                                    <span class="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded">#${p.numero}</span>
+                                    <span class="font-extrabold text-xs ml-1.5 text-slate-100">${p.cliente}</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <button onclick="imprimirComandaPorId(${p.id})" title="Imprimir Comanda" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🖨️</button>
+                                    <button onclick="verDetalhesPedido(${p.id})" title="Detalhes do Pedido" class="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1 rounded font-bold text-[10px] transition">🔍</button>
+                                </div>
+                            </div>
+
+                            <div class="p-3 space-y-2.5">
+                                <div class="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
+                                    <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Itens Solicitados:</p>
+                                    <div class="space-y-0.5 max-h-36 overflow-y-auto pr-1">
+                                        ${htmlItensCard}
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1 text-[11px] text-slate-700">
+                                    <p class="flex items-start space-x-1">
+                                        <span class="flex-shrink-0">📍</span>
+                                        <span class="font-semibold text-slate-900 leading-snug">${p.end}</span>
+                                    </p>
+                                    ${p.tel ? `<p class="flex items-center space-x-1"><span class="flex-shrink-0">📞</span><span class="text-slate-600">${p.tel}</span></p>` : ''}
+                                    <p class="flex items-center space-x-1">
+                                        <span class="flex-shrink-0">💳</span>
+                                        <span class="font-bold text-slate-800">${p.pagamento}${trocoStr}</span>
+                                    </p>
+                                </div>
+
+                                <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
+                                    <span class="text-slate-500 font-bold">Total + Entrega:</span>
+                                    <span class="text-sm font-extrabold text-emerald-600">R$ ${p.total.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            <div class="p-2.5 bg-slate-50 border-t border-slate-100">
+                                ${st === 'pendente' ? `
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button onclick="recusarPedidoOnline(${p.id})" class="bg-rose-100 text-rose-700 hover:bg-rose-200 font-extrabold py-2 rounded-lg text-xs transition border border-rose-200">✖ Recusar</button>
+                                        <button onclick="aceitarPedidoOnline(${p.id})" class="bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition">✔ Aceitar</button>
+                                    </div>
+                                ` : ''}
+
+                                ${st === 'preparacao' ? `
+                                    <button onclick="mudarStatusPedido(${p.id}, 'entrega')" class="w-full bg-sky-600 text-white hover:bg-sky-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-sky-600/20 transition flex items-center justify-center space-x-1">
+                                        <span>Saiu para Entrega</span>
+                                        <span>➔</span>
+                                    </button>
+                                ` : ''}
+
+                                ${st === 'entrega' ? `
+                                    <button onclick="mudarStatusPedido(${p.id}, 'finalizado')" class="w-full bg-emerald-600 text-white hover:bg-emerald-700 font-extrabold py-2 rounded-lg text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center space-x-1">
+                                        <span>✔ Concluir Entrega</span>
+                                    </button>
+                                ` : ''}
+
+                                ${st === 'finalizado' ? `
+                                    <div class="bg-emerald-100/80 text-emerald-800 text-[10px] font-bold py-1.5 px-2 rounded-lg text-center border border-emerald-200">
+                                        ✔ Pedido Entregue com Sucesso
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function filtrarComandasCozinhaHistorico() {
+            const val = document.getElementById('filtro-data-cozinha').value;
+            if(!val) return alert('Selecione uma data!');
+            const partes = val.split('-');
+            const dataFmt = `${partes[2]}/${partes[1]}/${partes[0]}`;
+            renderizarCozinha(dataFmt);
+        }
+
+        function limparFiltroCozinhaHistorico() {
+            document.getElementById('filtro-data-cozinha').value = '';
+            renderizarCozinha(null);
+        }
+
+        function aceitarPedidoOnline(id) {
+            const p = pedidos.find(i => i.id === id);
+            if(!p) return;
+
+            p.status = 'preparacao';
+            salvarDadosLocal();
+            salvarNoFirebase('pedidos', p.id, p);
+
+            const novoCaixa = {
+                id: Date.now(),
+                data: new Date().toLocaleString('pt-BR'),
+                tipo: 'ENTRADA',
+                descricao: `Venda Online #${p.numero} - ${p.cliente}`,
+                pagamento: p.pagamento,
+                valor: p.total,
+                taxa: p.taxa
+            };
+            caixa.unshift(novoCaixa);
+            salvarDadosLocal();
+            salvarNoFirebase('caixa', novoCaixa.id, novoCaixa);
+
+            renderizarCozinha();
+            renderizarCaixa();
+            imprimirComanda(p);
+        }
+
+        function recusarPedidoOnline(id) {
+            if(confirm('Deseja realmente recusar e cancelar este pedido?')) {
+                pedidos = pedidos.map(p => {
+                    if(p.id === id) {
+                        let atualizado = {...p, status: 'cancelado'};
+                        salvarNoFirebase('pedidos', atualizado.id, atualizado);
+                        return atualizado;
+                    }
+                    return p;
+                });
+                salvarDadosLocal();
+                renderizarCozinha();
+            }
+        }
+
+        function mudarStatusPedido(id, status) {
+            pedidos = pedidos.map(p => {
+                if(p.id === id) {
+                    let atualizado = {...p, status};
+                    salvarNoFirebase('pedidos', atualizado.id, atualizado);
+                    return atualizado;
+                }
+                return p;
+            });
+            salvarDadosLocal(); 
+            renderizarCozinha();
+        }
+
+        function imprimirComandaPorId(id) {
+            const pedido = pedidos.find(p => p.id === id);
+            if(pedido) imprimirComanda(pedido);
+        }
+
+        function verDetalhesPedido(id) {
+            const p = pedidos.find(i => i.id === id);
+            if(!p) return;
+            let htmlItens = '';
+            p.itens.forEach(i => {
+                htmlItens += `<li class="flex justify-between text-[11px] py-1 border-b border-slate-100"><span>${i.qtdCarrinho}x ${i.nome} (${i.tamanho})</span><span class="font-bold">R$ ${i.totalItem.toFixed(2)}</span></li>`;
+            });
+            const html = `
+                <div class="bg-red-50 p-3 rounded-xl border border-red-100 space-y-1">
+                    <p class="text-[9px] text-red-600 font-extrabold uppercase tracking-wider">Pedido #${p.numero}</p>
+                    <h4 class="text-sm font-bold text-slate-800">${p.cliente}</h4>
+                </div>
+                <div class="space-y-1 pt-1">
+                    <p><strong>📞 Telefone:</strong> ${p.tel || 'Nao informado'}</p>
+                    <p><strong>📍 Endereço:</strong> ${p.end}</p>
+                </div>
+                <div class="border-t border-slate-100 pt-2">
+                    <p class="font-bold text-[9px] uppercase text-slate-400 mb-1">Itens Solicitados:</p>
+                    <ul class="space-y-0.5">${htmlItens}</ul>
+                </div>
+                <div class="border-t border-slate-100 pt-2 space-y-1">
+                    <p><strong>Subtotal:</strong> R$ ${(p.total - p.taxa).toFixed(2)}</p>
+                    <p><strong>Taxa Entrega:</strong> R$ ${p.taxa.toFixed(2)}</p>
+                    <p class="text-sm font-extrabold text-emerald-600">Total Final: R$ ${p.total.toFixed(2)}</p>
+                    <p><strong>Pagamento:</strong> ${p.pagamento}</p>
+                </div>
+            `;
+            abrirPainel(`Ficha do Pedido #${p.numero}`, html);
+        }
+
+        function abrirPainel(titulo, conteudo) {
+            document.getElementById('painel-titulo').innerText = titulo;
+            document.getElementById('painel-conteudo').innerHTML = conteudo;
+            document.getElementById('painel-detalhes').classList.remove('hidden');
+        }
+
+        function fecharPainel() { document.getElementById('painel-detalhes').classList.add('hidden'); }
+
+        function lancarDespesa(e) {
+            e.preventDefault();
+            const novaDesp = {
+                id: Date.now(),
+                data: new Date().toLocaleString('pt-BR'),
+                tipo: 'SAIDA',
+                descricao: document.getElementById('desp-desc').value,
+                categoria: document.getElementById('desp-cat').value,
+                valor: parseFloat(document.getElementById('desp-valor').value)
+            };
+            caixa.unshift(novaDesp);
+            salvarDadosLocal();
+            salvarNoFirebase('caixa', novaDesp.id, novaDesp);
+
+            renderizarCaixa();
+            document.getElementById('desp-desc').value = '';
+            document.getElementById('desp-valor').value = '';
+        }
+
+        function renderizarCaixa(dataFiltroCustom = null) {
+            let bruto = 0, despesas = 0, taxas = 0;
+            let pay = { PIX: 0, CARTAO_CREDITO: 0, CARTAO_DEBITO: 0, DINHEIRO: 0 };
+            const tb = document.getElementById('tabela-caixa');
+            if(!tb) return;
+            tb.innerHTML = '';
+
+            const hojeStr = obterDataAtualStr();
+            const dataAlvo = dataFiltroCustom || hojeStr;
+
+            if(dataFiltroCustom) {
+                document.getElementById('titulo-tabela-caixa').innerText = `Extrato Consolidado do dia: ${dataFiltroCustom}`;
+            } else {
+                document.getElementById('titulo-tabela-caixa').innerText = `Extrato Consolidado de Hoje (${hojeStr})`;
+            }
+
+            caixa.forEach(c => {
+                const dataParte = c.data.split(',')[0].trim();
+                
+                if (dataParte === dataAlvo) {
+                    if(c.tipo === 'ENTRADA') {
+                        bruto += c.valor;
+                        if(c.taxa) taxas += c.taxa;
+                        if(pay[c.pagamento] !== undefined) pay[c.pagamento] += c.valor;
+                    } else {
+                        despesas += c.valor;
+                    }
+                    tb.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                            <td class="px-3 py-2 text-slate-600 whitespace-nowrap">${c.data}</td>
+                            <td class="px-3 py-2 font-bold whitespace-nowrap ${c.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'}">${c.tipo}</td>
+                            <td class="px-3 py-2 text-slate-800 break-words">${c.descricao}</td>
+                            <td class="px-3 py-2 font-extrabold text-slate-900 whitespace-nowrap">R$ ${c.valor.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            if(tb.innerHTML === '') {
+                tb.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-center text-slate-400 italic">Nenhum lancamento encontrado para esta data.</td></tr>';
+            }
+
+            document.getElementById('caixa-bruto').innerText = `R$ ${bruto.toFixed(2)}`;
+            document.getElementById('caixa-despesas').innerText = `R$ ${despesas.toFixed(2)}`;
+            document.getElementById('caixa-lucro').innerText = `R$ ${(bruto - despesas).toFixed(2)}`;
+            document.getElementById('caixa-taxas').innerText = `R$ ${taxas.toFixed(2)}`;
+
+            document.getElementById('pay-pix').innerText = `R$ ${pay.PIX.toFixed(2)}`;
+            document.getElementById('pay-credito').innerText = `R$ ${pay.CARTAO_CREDITO.toFixed(2)}`;
+            document.getElementById('pay-debito').innerText = `R$ ${pay.CARTAO_DEBITO.toFixed(2)}`;
+            document.getElementById('pay-dinheiro').innerText = `R$ ${pay.DINHEIRO.toFixed(2)}`;
+        }
+
+        function filtrarCaixaHistorico() {
+            const val = document.getElementById('filtro-data-caixa').value;
+            if(!val) return alert('Selecione uma data!');
+            const partes = val.split('-');
+            const dataFmt = `${partes[2]}/${partes[1]}/${partes[0]}`;
+            renderizarCaixa(dataFmt);
+        }
+
+        function limparFiltroCaixaHistorico() {
+            document.getElementById('filtro-data-caixa').value = '';
+            renderizarCaixa(null);
+        }
+
+        mudarAba('cozinha');
+    </script>
+</body>
+</html>

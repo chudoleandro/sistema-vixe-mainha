@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vixe Mainha Marmitaria e Cuscuzeria - Cardápio Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SDKs do Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getFirestore, collection, setDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+        
+        window.firebaseModules = { initializeApp, getFirestore, collection, setDoc, doc, onSnapshot };
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #fef3c7; }
+        ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 4px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-amber-50/50 text-slate-800 antialiased min-h-screen flex flex-col justify-between pb-24">
+
+    <div>
+        <!-- TOPHEADER COM IMAGEM DE FUNDO cabecalho.jpg -->
+        <header class="relative bg-slate-900 text-white border-b border-amber-300/60 shadow-md overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="./app/static/cabecalho.jpg" alt="Fundo Cabeçalho" class="w-full h-full object-cover opacity-70">
+                <div class="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-900/40 to-slate-950/60"></div>
+            </div>
+
+            <div class="max-w-4xl mx-auto px-4 py-8 flex flex-col items-center justify-center text-center relative z-10">
+                
+                <div class="sm:absolute right-4 top-4 mb-3 sm:mb-0 flex items-center space-x-1.5 bg-emerald-500/20 border border-emerald-500/40 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-[10px] font-extrabold text-emerald-300 uppercase tracking-wider">Aberto Agora</span>
+                </div>
+
+                <!-- Logo -->
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden shadow-2xl shadow-black/40 mb-3 border-2 border-amber-400 bg-white flex items-center justify-center p-0.5">
+                    <img src="./app/static/logo.jpeg" alt="Logo Vixe Mainha" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-tr from-red-600 via-amber-500 to-yellow-400 flex items-center justify-center font-black text-white text-xl\'>VM</div>';">
+                </div>
+
+                <!-- Nome abaixo da logo -->
+                <div class="flex flex-col items-center space-y-1">
+                    <h1 class="font-black text-xl sm:text-3xl leading-tight tracking-tight uppercase drop-shadow-md">
+                        <span style="color: #fb923c;">VIXE</span> <span style="color: #b45309;">MAINHA</span> <span class="text-emerald-400 text-lg sm:text-2xl drop-shadow-sm" title="Cacto">🌵</span>
+                    </h1>
+                    <p class="text-[11px] text-amber-100 font-extrabold uppercase tracking-widest drop-shadow">Marmitaria & Cuscuzeria</p>
+                </div>
+            </div>
+
+            <!-- BARRA DE CATEGORIAS -->
+            <div id="barra-categorias-topo" class="max-w-4xl mx-auto px-4 py-3 flex space-x-2 overflow-x-auto sm:justify-center no-scrollbar bg-slate-950/50 backdrop-blur-md border-t border-white/15 relative z-10">
+                <!-- Gerado Dinamicamente -->
+            </div>
+        </header>
+
+        <main class="max-w-4xl mx-auto p-3 sm:p-6 space-y-6" id="main-cardapio-container">
+            <p class="text-center text-amber-900/60 italic py-10 text-xs font-medium">Carregando cardápio do Vixe Mainha em tempo real...</p>
+        </main>
+    </div>
+
+    <!-- RODAPÉ -->
+    <footer class="max-w-4xl mx-auto w-full mt-12 mb-6 px-4">
+        <div class="bg-slate-900 text-slate-200 rounded-3xl p-6 shadow-xl border border-slate-800 text-center space-y-4">
+            <div class="flex flex-col sm:flex-row items-center justify-center sm:space-x-3 space-y-2 sm:space-y-0">
+                <div class="w-12 h-12 rounded-2xl overflow-hidden shadow-md border-2 border-amber-500 bg-white p-0.5">
+                    <img src="./app/static/logo.jpeg"alt="Logo Vixe Mainha" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'w-full h-full bg-slate-900 text-[9px] font-black flex items-center justify-center text-amber-400\'>VM</div>';">
+                </div>
+                <div class="sm:text-left text-center">
+                    <h3 class="font-black text-white text-sm tracking-tight uppercase">Vixe Mainha Marmitaria & Cuscuzeria</h3>
+                    <p class="text-[10px] text-amber-400 font-extrabold tracking-widest uppercase">O verdadeiro sabor nordestino</p>
+                </div>
+            </div>
+            <div class="pt-2 text-[10px] text-slate-500 font-medium">
+                © 2026 Vixe Mainha Marmitaria e Cuscuzeria. Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <!-- BARRA FIXA DO CARRINHO -->
+    <div id="barra-carrinho" class="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t-2 border-red-600 shadow-2xl p-3 sm:p-4 hidden transition-all duration-300">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div>
+                <p id="cart-qtd-txt" class="text-[10px] sm:text-xs font-extrabold text-slate-500 uppercase tracking-wider">0 itens no pedido</p>
+                <p id="cart-total-txt" class="text-base sm:text-lg font-black text-emerald-600">R$ 0,00</p>
+            </div>
+            <button onclick="abrirModalCarrinho()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-extrabold text-xs sm:text-sm transition shadow-lg shadow-red-600/30 flex items-center space-x-2 active:scale-95">
+                <span>Ver Carrinho</span>
+                <span class="bg-white/20 px-2 py-0.5 rounded text-[10px]">➔</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHE DO PRATO -->
+    <div id="modal-detalhe-prato" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col justify-between overflow-hidden shadow-2xl">
+            <div class="relative overflow-y-auto">
+                <button onclick="fecharDetalhePrato()" class="absolute top-3 left-3 bg-slate-900/70 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg z-10">✕</button>
+                <div class="bg-amber-50 flex items-center justify-center border-b border-amber-100 p-4 max-h-56 overflow-hidden">
+                    <img id="detalhe-img" src="" class="max-h-48 w-auto object-contain rounded-xl shadow-sm">
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="space-y-1.5">
+                        <h2 id="detalhe-nome" class="font-black text-lg text-slate-900 leading-tight"></h2>
+                        <p id="detalhe-desc" class="text-xs sm:text-sm text-slate-600 leading-relaxed"></p>
+                        <div class="pt-1"><span id="detalhe-preco" class="font-black text-emerald-600 text-lg"></span></div>
+                    </div>
+                    
+                    <div id="container-adicionais-box" class="hidden space-y-3 bg-amber-50/80 p-4 rounded-2xl border border-amber-200">
+                        <div class="border-b border-amber-200 pb-1.5">
+                            <h3 class="font-black text-xs sm:text-sm text-red-700 uppercase tracking-tight">⭐ Complementos e Adicionais</h3>
+                            <p class="text-[10px] text-amber-900 font-semibold">Escolha a quantidade desejada:</p>
+                        </div>
+                        <div id="lista-adicionais-prato" class="space-y-3"></div>
+                    </div>
+
+                    <div class="bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200 space-y-2">
+                        <label class="block font-extrabold text-xs text-amber-950">Precisa de talheres descartáveis?</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center space-x-2 border border-amber-200 p-2.5 rounded-xl cursor-pointer bg-white">
+                                <input type="radio" name="talher-opt" value="NÃO" checked class="text-red-600">
+                                <span class="text-xs font-bold text-slate-700">Não preciso</span>
+                            </label>
+                            <label class="flex items-center space-x-2 border border-amber-200 p-2.5 rounded-xl cursor-pointer bg-white">
+                                <input type="radio" name="talher-opt" value="SIM" class="text-red-600">
+                                <span class="text-xs font-bold text-slate-700">Sim, preciso</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block font-extrabold text-xs text-slate-800">Observações para este prato:</label>
+                        <textarea id="detalhe-obs" placeholder="Ex: Sem cebola..." class="w-full border border-slate-300 p-2.5 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none" rows="2"></textarea>
+                    </div>
+                    <div class="flex items-center justify-between bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200">
+                        <span class="font-extrabold text-xs text-amber-950">Quantidade:</span>
+                        <div class="flex items-center space-x-3">
+                            <button onclick="alterarQtdDetalhe(-1)" class="w-9 h-9 rounded-xl bg-white border border-amber-300 font-extrabold">-</button>
+                            <span id="detalhe-qtd" class="font-black text-base w-5 text-center">1</span>
+                            <button onclick="alterarQtdDetalhe(1)" class="w-9 h-9 rounded-xl bg-white border border-amber-300 font-extrabold">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex space-x-3">
+                <button onclick="fecharDetalhePrato()" class="w-1/3 bg-slate-200 py-3 rounded-xl font-bold text-xs">← Voltar</button>
+                <button onclick="confirmarAdicionarPrato()" class="w-2/3 bg-red-600 text-white py-3 rounded-xl font-extrabold text-xs flex justify-between px-5 items-center">
+                    <span>Adicionar</span>
+                    <span id="btn-total-item-modal" class="font-black">R$ 0,00</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DO CARRINHO -->
+    <div id="modal-carrinho" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col justify-between overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-amber-200 flex justify-between items-center bg-amber-100/60">
+                <h3 class="font-black text-sm text-red-700 uppercase">Seu Pedido - Vixe Mainha</h3>
+                <button onclick="fecharModalCarrinho()" class="text-slate-400 font-bold text-xl">✕</button>
+            </div>
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-4">
+                <div id="carrinho-itens-lista" class="space-y-2 divide-y divide-slate-100"></div>
+                
+                <div class="pt-2">
+                    <button onclick="cancelarCompraCompleta()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center space-x-1.5">
+                        <span>❌ Cancelar Compra e Esvaziar Carrinho</span>
+                    </button>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 class="font-extrabold text-xs text-slate-900">Seus Dados de Entrega</h4>
+                    <input type="text" id="cli-nome" placeholder="Seu Nome Completo *" class="w-full border border-slate-300 p-2.5 rounded-xl text-xs" required>
+                    <input type="text" id="cli-tel" placeholder="WhatsApp / Telefone *" class="w-full border border-slate-300 p-2.5 rounded-xl text-xs" required>
+                    <input type="text" id="cli-end" placeholder="Endereço de Entrega Completo *" class="w-full border border-slate-300 p-2.5 rounded-xl text-xs" required>
+                    <input type="text" id="cli-obs" placeholder="Observações Gerais..." class="w-full border border-slate-300 p-2.5 rounded-xl text-xs">
+                </div>
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 class="font-extrabold text-xs text-slate-900">Forma de Pagamento</h4>
+                    <select id="cli-pagamento" onchange="toggleFormaPagamento(this.value)" class="w-full border border-slate-300 p-2.5 rounded-xl text-xs bg-white">
+                        <option value="PIX">PIX</option>
+                        <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                        <option value="CARTAO_DEBITO">Cartão de Débito</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                    </select>
+
+                    <!-- CAIXA DE INFORMAÇÃO PIX -->
+                    <div id="box-pix-cli" class="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 space-y-2 text-xs">
+                        <div class="flex items-center space-x-1.5 text-emerald-800 font-extrabold">
+                            <span>📱 Chave PIX (Celular):</span>
+                            <span class="bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-900 select-all font-black">19991467791</span>
+                        </div>
+                        <div class="text-[11px] text-emerald-950 leading-relaxed">
+                            <p><strong>Banco:</strong> Mercado Pago IP LTDA</p>
+                            <p><strong>Nome:</strong> BRUNNA MARIA ALVES SOARES</p>
+                        </div>
+                        <div class="bg-emerald-100/80 p-2 rounded-lg text-[10px] text-emerald-900 font-bold text-center border border-emerald-200">
+                            ⚠️ Por favor, envie o comprovante do PIX pelo WhatsApp informado seu Nome Completo após confirmar o pedido!
+                        </div>
+                    </div>
+
+                    <!-- CAIXA DE TROCO PARA DINHEIRO -->
+                    <div id="box-troco-cli" class="hidden bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                        <label class="block text-[10px] font-bold text-amber-900 mb-1">Troco para quanto?</label>
+                        <input type="number" id="cli-troco" placeholder="Ex: 50.00" class="w-full border border-amber-300 p-2 rounded-lg text-xs bg-white">
+                    </div>
+                </div>
+                <div class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 space-y-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600 font-semibold"><span>Subtotal:</span><span id="txt-subtotal">R$ 0,00</span></div>
+                    <div class="flex justify-between text-slate-600 font-semibold"><span>Taxa de Entrega:</span><span>R$ 6,00</span></div>
+                    <div class="flex justify-between font-black text-slate-900 text-sm pt-2 border-t border-amber-200"><span>Total Final:</span><span id="txt-total-final" class="text-emerald-600">R$ 0,00</span></div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50">
+                <button onclick="enviarPedidoDireto()" class="w-full bg-emerald-600 text-white py-3.5 rounded-2xl font-black text-xs hover:bg-emerald-700 transition shadow-lg">
+                    Confirmar e Enviar Pedido ao Restaurante
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TELA SUCESSO -->
+    <div id="modal-sucesso" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-3xl max-w-sm w-full text-center space-y-4 shadow-2xl">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto font-bold animate-bounce">✔</div>
+            <h3 class="text-lg font-black text-slate-900">Pedido Enviado!</h3>
+            <p class="text-xs text-slate-500">Seu pedido chegou na cozinha do <strong>Vixe Mainha</strong> com sucesso.</p>
+            <div id="sucesso-num-pedido" class="bg-amber-100 text-red-800 font-black text-base py-2.5 px-4 rounded-2xl border border-amber-300">Pedido #000</div>
+            
+            <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-emerald-900 text-[11px] font-medium leading-relaxed">
+                Se você escolheu a forma de pagamento <strong>PIX</strong>, lembre-se de enviar o comprovante com o seu nome pelo WhatsApp!
+            </div>
+
+            <button onclick="fecharSucesso()" class="w-full bg-slate-900 text-white py-3 rounded-xl text-xs font-bold">OK, Entendido!</button>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE CONEXÃO AO FIREBASE -->
+    <script>
+        let db = null;
+        let cardapio = [];
+        let carrinhoCli = [];
+        let pratoSelecionado = null;
+        let qtdDetalhe = 1;
+        const TAXA_ENTREGA = 6.00;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const firebaseConfig = {
+                apiKey: "AIzaSyA93ArzBuKseUDxhSxPpExh2LaWo-hm_Mw",
+                authDomain: "vixe-mainha-sistema.firebaseapp.com",
+                projectId: "vixe-mainha-sistema",
+                storageBucket: "vixe-mainha-sistema.firebasestorage.app",
+                messagingSenderId: "600209465349",
+                appId: "1:600209465349:web:00279442691514d72a7c6c"
+            };
+
+            try {
+                const { initializeApp, getFirestore, collection, onSnapshot } = window.firebaseModules;
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+
+                onSnapshot(collection(db, 'cardapio'), (snapshot) => {
+                    cardapio = [];
+                    snapshot.forEach(doc => {
+                        cardapio.push(doc.data());
+                    });
+                    renderizarCardapioEstiloIFood();
+                });
+
+            } catch(e) {
+                console.error("Erro ao conectar cardápio ao Firebase:", e);
+                cardapio = JSON.parse(localStorage.getItem('mp_cardapio')) || [];
+                renderizarCardapioEstiloIFood();
+            }
+        });
+
+        async function salvarPedidoNoFirebase(pedidoObj) {
+            if(!db) return;
+            try {
+                const { doc, setDoc } = window.firebaseModules;
+                await setDoc(doc(db, 'pedidos', String(pedidoObj.id)), pedidoObj);
+            } catch(e) {
+                console.error("Erro ao enviar pedido para o Firebase:", e);
+            }
+        }
+
+        function renderizarCardapioEstiloIFood() {
+            const container = document.getElementById('main-cardapio-container');
+            const navTopo = document.getElementById('barra-categorias-topo');
+            if(!container) return;
+
+            container.innerHTML = '';
+            navTopo.innerHTML = '';
+
+            const visiveis = cardapio.filter(p => p.visivelOnline !== false);
+
+            if(visiveis.length === 0) {
+                container.innerHTML = '<div class="bg-white/80 p-8 rounded-2xl text-center text-amber-900/60 italic text-xs shadow-sm border border-amber-200/60">Nenhum prato disponível no momento. Cadastre pratos no seu painel de gestão!</div>';
+                return;
+            }
+
+            const ordemFixa = ['Marmita', 'Cuscuz', 'Bebida', 'Sobremesa'];
+            const categoriasAgrupadas = {};
+            visiveis.forEach(p => {
+                const cat = p.categoria || 'Outros';
+                if(!categoriasAgrupadas[cat]) categoriasAgrupadas[cat] = [];
+                categoriasAgrupadas[cat].push(p);
+            });
+
+            const categoriasOrdenadas = Object.keys(categoriasAgrupadas).sort((a, b) => {
+                let indexA = ordemFixa.indexOf(a);
+                let indexB = ordemFixa.indexOf(b);
+                if (indexA === -1) indexA = 99;
+                if (indexB === -1) indexB = 99;
+                return indexA - indexB;
+            });
+
+            categoriasOrdenadas.forEach((cat) => {
+                const pratos = categoriasAgrupadas[cat];
+                const catId = `cat-${cat.toLowerCase().replace(/\s+/g, '-')}`;
+
+                navTopo.innerHTML += `
+                    <a href="#${catId}" class="bg-white/90 hover:bg-red-600 text-red-700 hover:text-white px-4 py-1.5 rounded-full text-xs font-extrabold tracking-tight whitespace-nowrap transition shadow-sm border border-red-200 backdrop-blur-sm">
+                        ${cat}
+                    </a>
+                `;
+
+                let pratosHtml = '';
+                pratos.forEach(p => {
+                    pratosHtml += `
+                        <div onclick="abrirDetalhePrato(${p.id})" class="bg-white p-3.5 rounded-2xl shadow-sm border border-amber-200/70 flex space-x-3 items-center hover:border-red-500 hover:shadow-md cursor-pointer transition group relative">
+                            <img src="${p.fotoUrl || 'https://via.placeholder.com/100'}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover flex-shrink-0 border border-amber-100">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-extrabold text-slate-900 text-xs sm:text-sm truncate group-hover:text-red-600 transition">${p.nome}</h3>
+                                <p class="text-[10px] sm:text-xs text-slate-500 line-clamp-2 mt-0.5 leading-snug">${p.descricao || 'Clique para ver detalhes do prato.'}</p>
+                                <div class="flex justify-between items-center mt-2.5">
+                                    <span class="font-black text-emerald-600 text-xs sm:text-sm">R$ ${p.preco.toFixed(2)}</span>
+                                    <span class="bg-amber-50 group-hover:bg-red-50 text-amber-950 group-hover:text-red-600 font-extrabold px-2.5 py-1 rounded-lg text-[10px] border border-amber-200/60 transition">Ver Mais ➔</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <section id="${catId}" class="space-y-3 pt-2">
+                        <div class="flex justify-between items-center bg-white p-3.5 rounded-2xl border border-amber-200/80 shadow-sm">
+                            <div class="flex items-center space-x-2">
+                                <h2 class="font-black text-sm sm:text-base text-red-700 uppercase tracking-tight">${cat}</h2>
+                                <span class="bg-amber-100 text-amber-900 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-200">${pratos.length}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${pratosHtml}
+                        </div>
+                    </section>
+                `;
+            });
+        }
+
+        function abrirDetalhePrato(id) {
+            const p = cardapio.find(item => item.id === id);
+            if(!p) return;
+            pratoSelecionado = p;
+            qtdDetalhe = 1;
+
+            document.getElementById('detalhe-img').src = p.fotoUrl || 'https://via.placeholder.com/300';
+            document.getElementById('detalhe-nome').innerText = p.nome;
+            document.getElementById('detalhe-desc').innerText = p.descricao || '';
+            document.getElementById('detalhe-preco').innerText = `R$ ${p.preco.toFixed(2)}`;
+            document.getElementById('detalhe-qtd').innerText = qtdDetalhe;
+            document.getElementById('detalhe-obs').value = '';
+
+            const boxAdicionais = document.getElementById('container-adicionais-box');
+            const listaAdicionais = document.getElementById('lista-adicionais-prato');
+
+            if (p.adicionais && p.adicionais.length > 0) {
+                boxAdicionais.classList.remove('hidden');
+                listaAdicionais.innerHTML = '';
+
+                const gruposSubcategorias = {};
+                p.adicionais.forEach((ad, index) => {
+                    const nomeSubcat = ad.titulo || ad.subcategoria || 'Adicionais';
+                    if(!gruposSubcategorias[nomeSubcat]) {
+                        gruposSubcategorias[nomeSubcat] = [];
+                    }
+                    gruposSubcategorias[nomeSubcat].push({ ...ad, indexGlobal: index });
+                });
+
+                Object.keys(gruposSubcategorias).forEach(subcatNome => {
+                    let itensHtml = '';
+                    gruposSubcategorias[subcatNome].forEach(ad => {
+                        itensHtml += `
+                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-white border border-amber-200">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-800 block">${ad.nome}</span>
+                                    <span class="text-[10px] font-extrabold text-emerald-600">+ R$ ${ad.preco.toFixed(2)}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, -1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">-</button>
+                                    <span id="qtd-adicional-${ad.indexGlobal}" class="font-black text-xs text-slate-900 w-4 text-center" data-preco="${ad.preco}" data-nome="${ad.nome}">0</span>
+                                    <button type="button" onclick="alterarQtdAdicional(${ad.indexGlobal}, 1)" class="w-7 h-7 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">+</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    listaAdicionais.innerHTML += `
+                        <div class="space-y-1.5 pt-1">
+                            <p class="font-black text-[11px] text-red-700 uppercase tracking-wide bg-amber-200/60 px-2.5 py-1 rounded-lg">${subcatNome}</p>
+                            ${itensHtml}
+                        </div>
+                    `;
+                });
+
+            } else {
+                boxAdicionais.classList.add('hidden');
+                listaAdicionais.innerHTML = '';
+            }
+
+            atualizarSubtotalDetalheModal();
+            document.getElementById('modal-detalhe-prato').classList.remove('hidden');
+        }
+
+        function fecharDetalhePrato() { document.getElementById('modal-detalhe-prato').classList.add('hidden'); pratoSelecionado = null; }
+        function alterarQtdDetalhe(delta) { qtdDetalhe = Math.max(1, qtdDetalhe + delta); document.getElementById('detalhe-qtd').innerText = qtdDetalhe; atualizarSubtotalDetalheModal(); }
+        function alterarQtdAdicional(index, delta) {
+            const spanQtd = document.getElementById(`qtd-adicional-${index}`);
+            if(!spanQtd) return;
+            let novaQtd = Math.max(0, (parseInt(spanQtd.innerText) || 0) + delta);
+            spanQtd.innerText = novaQtd;
+            atualizarSubtotalDetalheModal();
+        }
+        function atualizarSubtotalDetalheModal() {
+            if(!pratoSelecionado) return;
+            let precoUnit = pratoSelecionado.preco;
+            document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
+                precoUnit += (parseInt(span.innerText) || 0) * (parseFloat(span.getAttribute('data-preco')) || 0);
+            });
+            document.getElementById('btn-total-item-modal').innerText = `R$ ${(precoUnit * qtdDetalhe).toFixed(2)}`;
+        }
+
+        function confirmarAdicionarPrato() {
+            if(!pratoSelecionado) return;
+            const talheres = document.querySelector('input[name="talher-opt"]:checked')?.value || 'NÃO';
+            const obsPrato = document.getElementById('detalhe-obs').value.trim();
+            let adicionais = [], somaAd = 0;
+
+            document.querySelectorAll('[id^="qtd-adicional-"]').forEach(span => {
+                const qtd = parseInt(span.innerText) || 0;
+                if(qtd > 0) {
+                    adicionais.push(`${qtd}x ${span.getAttribute('data-nome')}`);
+                    somaAd += qtd * (parseFloat(span.getAttribute('data-preco')) || 0);
+                }
+            });
+
+            let desc = [];
+            if(adicionais.length > 0) desc.push(`Adicionais: ${adicionais.join(', ')}`);
+            if(talheres === 'SIM') desc.push('Com Talher');
+            if(obsPrato) desc.push(`Obs: ${obsPrato}`);
+
+            const obsFinal = desc.length > 0 ? `(${desc.join(' | ')})` : '';
+            const precoFinal = pratoSelecionado.preco + somaAd;
+
+            const existente = carrinhoCli.find(c => c.id === pratoSelecionado.id && c.obsItem === obsFinal);
+            if(existente) { existente.qtd += qtdDetalhe; } else {
+                carrinhoCli.push({ ...pratoSelecionado, preco: precoFinal, nome: obsFinal ? `${pratoSelecionado.nome} ${obsFinal}` : pratoSelecionado.nome, qtd: qtdDetalhe, obsItem: obsFinal });
+            }
+            atualizarBarraCarrinho();
+            fecharDetalhePrato();
+        }
+
+        function atualizarBarraCarrinho() {
+            const qtd = carrinhoCli.reduce((a, b) => a + b.qtd, 0);
+            const sub = carrinhoCli.reduce((a, b) => a + (b.preco * b.qtd), 0);
+            document.getElementById('cart-qtd-txt').innerText = `${qtd} item(ns)`;
+            document.getElementById('cart-total-txt').innerText = `R$ ${(sub + TAXA_ENTREGA).toFixed(2)}`;
+            const barra = document.getElementById('barra-carrinho');
+            if(qtd > 0) barra.classList.remove('hidden'); else barra.classList.add('hidden');
+        }
+
+        function abrirModalCarrinho() {
+            renderizarItensModal();
+            document.getElementById('modal-carrinho').classList.remove('hidden');
+        }
+
+        function renderizarItensModal() {
+            const box = document.getElementById('carrinho-itens-lista');
+            box.innerHTML = '';
+            let sub = 0;
+            carrinhoCli.forEach((c, idx) => {
+                sub += c.preco * c.qtd;
+                box.innerHTML += `
+                    <div class="flex justify-between items-center py-2 text-xs">
+                        <div><p class="font-bold">${c.nome}</p><p class="text-slate-400">R$ ${c.preco.toFixed(2)}</p></div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="carrinhoCli[${idx}].qtd--; if(carrinhoCli[${idx}].qtd<=0)carrinhoCli.splice(${idx},1); atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 rounded font-bold">-</button>
+                            <span class="font-bold">${c.qtd}</span>
+                            <button onclick="carrinhoCli[${idx}].qtd++; atualizarBarraCarrinho(); renderizarItensModal();" class="w-6 h-6 bg-amber-50 rounded font-bold">+</button>
+                            <span class="font-black ml-2">R$ ${(c.preco*c.qtd).toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('txt-subtotal').innerText = `R$ ${sub.toFixed(2)}`;
+            document.getElementById('txt-total-final').innerText = `R$ ${(sub + TAXA_ENTREGA).toFixed(2)}`;
+        }
+
+        function cancelarCompraCompleta() {
+            if(confirm('Tem certeza que deseja cancelar e esvaziar o seu carrinho?')) {
+                carrinhoCli = [];
+                document.getElementById('cli-nome').value = '';
+                document.getElementById('cli-tel').value = '';
+                document.getElementById('cli-end').value = '';
+                document.getElementById('cli-obs').value = '';
+                document.getElementById('cli-troco').value = '';
+                document.getElementById('cli-pagamento').value = 'PIX';
+                toggleFormaPagamento('PIX');
+                
+                atualizarBarraCarrinho();
+                fecharModalCarrinho();
+            }
+        }
+
+        function fecharModalCarrinho() { document.getElementById('modal-carrinho').classList.add('hidden'); }
+        
+        // CONTROLA EXIBIÇÃO DE PIX E TROCO CONFORME OPÇÃO SELECIONADA
+        function toggleFormaPagamento(val) { 
+            const boxTroco = document.getElementById('box-troco-cli'); 
+            const boxPix = document.getElementById('box-pix-cli');
+
+            if(val === 'DINHEIRO') {
+                boxTroco.classList.remove('hidden');
+                boxPix.classList.add('hidden');
+            } else if(val === 'PIX') {
+                boxPix.classList.remove('hidden');
+                boxTroco.classList.add('hidden');
+            } else {
+                boxTroco.classList.add('hidden');
+                boxPix.classList.add('hidden');
+            }
+        }
+
+        async function enviarPedidoDireto() {
+            const nome = document.getElementById('cli-nome').value;
+            const tel = document.getElementById('cli-tel').value;
+            const end = document.getElementById('cli-end').value;
+            const obs = document.getElementById('cli-obs').value;
+            const pagamento = document.getElementById('cli-pagamento').value;
+            const troco = document.getElementById('cli-troco').value;
+
+            if(!nome || !tel || !end || carrinhoCli.length === 0) return alert('Preencha nome, telefone e endereço!');
+
+            const sub = carrinhoCli.reduce((a, b) => a + (b.preco * b.qtd), 0);
+            const total = sub + TAXA_ENTREGA;
+            const numPedido = Math.floor(Math.random() * 900) + 101;
+
+            const novoPedido = {
+                id: Date.now(),
+                numero: numPedido,
+                cliente: nome,
+                tel,
+                end: obs ? `${end} (Obs: ${obs})` : end,
+                itens: carrinhoCli.map(c => ({ nome: c.nome, tamanho: c.tamanho || 'M', qtdCarrinho: c.qtd, totalItem: c.preco * c.qtd })),
+                taxa: TAXA_ENTREGA,
+                total,
+                pagamento,
+                trocoInfo: (pagamento === 'DINHEIRO' && troco) ? troco : null,
+                status: 'pendente'
+            };
+
+            await salvarPedidoNoFirebase(novoPedido);
+
+            let pedidosLocais = JSON.parse(localStorage.getItem('mp_pedidos')) || [];
+            pedidosLocais.push(novoPedido);
+            localStorage.setItem('mp_pedidos', JSON.stringify(pedidosLocais));
+
+            document.getElementById('sucesso-num-pedido').innerText = `Pedido #${numPedido}`;
+            fecharModalCarrinho();
+            document.getElementById('modal-sucesso').classList.remove('hidden');
+
+            carrinhoCli = [];
+            document.getElementById('cli-nome').value = '';
+            document.getElementById('cli-tel').value = '';
+            document.getElementById('cli-end').value = '';
+            document.getElementById('cli-obs').value = '';
+            document.getElementById('cli-troco').value = '';
+            document.getElementById('cli-pagamento').value = 'PIX';
+            toggleFormaPagamento('PIX');
+            
+            atualizarBarraCarrinho();
+        }
+
+        function fecharSucesso() { document.getElementById('modal-sucesso').classList.add('hidden'); }
+    </script>
+</body>
+</html>
