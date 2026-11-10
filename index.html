@@ -1967,31 +1967,67 @@
             renderizarCozinha(null);
         }
 
-        function aceitarPedidoOnline(id) {
-            const p = pedidos.find(i => i.id === id);
-            if(!p) return;
+        async function aceitarPedidoOnline(id) {
+    if (!db) {
+        console.error("Banco de dados não inicializado!");
+        return;
+    }
 
-            p.status = 'preparacao';
-            salvarDadosLocal();
-            salvarNoFirebase('pedidos', p.id, p);
+    // Converte o ID para string para garantir que ache o pedido independente do tipo
+    const idStr = String(id);
+    const p = pedidos.find(i => String(i.id) === idStr);
+    
+    if (!p) {
+        console.error("Pedido não encontrado na lista local:", id);
+        alert("Erro: Pedido não encontrado.");
+        return;
+    }
 
-            const novoCaixa = {
-                id: Date.now(),
-                data: new Date().toLocaleString('pt-BR'),
-                tipo: 'ENTRADA',
-                descricao: `Venda Online #${p.numero} - ${p.cliente}`,
-                pagamento: p.pagamento,
-                valor: p.total,
-                taxa: p.taxa
-            };
+    try {
+        // 1. Atualiza o status do pedido para 'preparacao' no Firebase
+        p.status = 'preparacao';
+        await db.collection('pedidos').doc(idStr).update({
+            status: 'preparacao'
+        });
+        console.log("Pedido atualizado para preparação no Firebase:", idStr);
+
+        // 2. Lança a entrada correspondente no Caixa
+        const novoCaixa = {
+            id: String(Date.now()),
+            data: new Date().toLocaleString('pt-BR'),
+            tipo: 'ENTRADA',
+            descricao: `Venda Online #${p.numero || '0'} - ${p.cliente || 'Cliente'}`,
+            pagamento: p.pagamento || 'DINHEIRO',
+            valor: Number(p.total || 0),
+            taxa: Number(p.taxa || 0)
+        };
+
+        // Salva o caixa no Firebase
+        await db.collection('caixa').doc(novoCaixa.id).set(novoCaixa);
+        
+        // Atualiza a lista local de caixa se ela existir
+        if (typeof caixa !== 'undefined') {
             caixa.unshift(novoCaixa);
-            salvarDadosLocal();
-            salvarNoFirebase('caixa', novoCaixa.id, novoCaixa);
-
-            renderizarCozinha();
-            renderizarCaixa();
-            imprimirComanda(p);
+            if (typeof salvarDadosLocal === 'function') salvarDadosLocal();
         }
+
+        // 3. Atualiza as telas e imprime
+        if (typeof renderizarCozinha === 'function') renderizarCozinha();
+        if (typeof renderizarCaixa === 'function') renderizarCaixa();
+        
+        if (typeof imprimirComanda === 'function') {
+            imprimirComanda(p);
+        } else if (typeof imprimirComandaPorId === 'function') {
+            imprimirComandaPorId(p.id);
+        }
+
+        console.log("Pedido aceito e processado com sucesso!");
+
+    } catch (error) {
+        console.error("Erro ao processar a aceitação do pedido:", error);
+        alert("Erro ao aceitar o pedido. Verifique o console (F12).");
+    }
+}
 
         function recusarPedidoOnline(id) {
             if(confirm('Deseja realmente recusar e cancelar este pedido?')) {
