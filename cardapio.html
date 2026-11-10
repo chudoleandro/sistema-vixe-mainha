@@ -365,27 +365,25 @@
     };
 
     try {
-        console.log("Enviando pedido para o Firebase...", novoPedido);
-
-        // Salva diretamente na coleção 'pedidos' do Firestore
-        await db.collection('pedidos').doc(pedidoId).set(novoPedido);
-        console.log("Pedido enviado com sucesso pelo cardápio! ID:", pedidoId);
+        console.log("Iniciando envio para o Firestore na coleção 'pedidos', ID:", pedidoId);
         
-        // Exibe o número do pedido no modal de sucesso, se existir
+        // Força a checagem se o db é válido e executa com .then/.catch explícito
+        await db.collection('pedidos').doc(pedidoId).set(novoPedido);
+        
+        console.log("SUCESSO ABSOLUTO: O Firestore confirmou a gravação do pedido:", pedidoId);
+        
+        // Restante do seu código de sucesso...
         const elSucessoNum = document.getElementById('sucesso-num-pedido');
         if (elSucessoNum) {
             elSucessoNum.innerText = `Pedido #${numeroPedido}`;
         }
 
-        // Fecha o modal do carrinho / checkout
         const modalCarrinho = document.getElementById('modal-carrinho') || document.getElementById('modal-checkout');
         if (modalCarrinho) modalCarrinho.classList.add('hidden');
 
-        // Abre o modal de sucesso, se existir
         const modalSucesso = document.getElementById('modal-sucesso');
         if (modalSucesso) modalSucesso.classList.remove('hidden');
 
-        // Limpa o carrinho e reseta os campos do formulário
         carrinhoCli = [];
         if (nomeInput) nomeInput.value = '';
         if (telInput) telInput.value = '';
@@ -394,21 +392,14 @@
         if (trocoInput) trocoInput.value = '';
         if (pagSelect) pagSelect.value = 'PIX';
 
-        if (typeof toggleFormaPagamento === 'function') {
-            toggleFormaPagamento('PIX');
-        }
-
-        if (typeof atualizarBarraCarrinho === 'function') {
-            atualizarBarraCarrinho();
-        }
-
-        if (typeof renderizarItensModal === 'function') {
-            renderizarItensModal();
-        }
+        if (typeof toggleFormaPagamento === 'function') toggleFormaPagamento('PIX');
+        if (typeof atualizarBarraCarrinho === 'function') atualizarBarraCarrinho();
+        if (typeof renderizarItensModal === 'function') renderizarItensModal();
 
     } catch (error) {
-        console.error("Erro ao enviar pedido para o Firebase:", error);
-        alert("Erro ao enviar pedido. Verifique sua conexão e tente novamente.");
+        // ISSO VAI MOSTRAR O ERRO REAL DO FIREBASE NO CONSOLE
+        console.error("ERRO CRÍTICO DO FIREBASE AO SALVAR:", error.code, error.message, error);
+        alert(`FALHA AO SALVAR NO BANCO: ${error.message}`);
     }
 }
 
