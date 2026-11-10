@@ -894,29 +894,22 @@
             }
         }
 
-        function sincronizarPedidosFirebase() {
-    if (!db) {
-        console.error("Banco de dados não inicializado no index!");
-        return;
-    }
-
-    db.collection('pedidos').onSnapshot((snapshot) => {
-        window.pedidos = []; // Atualiza a lista global com o banco
-        
+        function sincronizarColecaoTempoReal(nomeColecao, callback) {
+    if(!db) return;
+    
+    db.collection(nomeColecao).onSnapshot((snapshot) => {
+        let lista = [];
         snapshot.forEach(doc => {
-            let p = doc.data();
-            p.id = doc.id; // Garante que o ID do documento seja o ID do pedido
-            window.pedidos.push(p);
+            let item = doc.data();
+            item.id = doc.id; // 🔑 ESSENCIAL: Garante que o ID do Firebase vire o ID do objeto
+            lista.push(item);
         });
-
-        console.log("Pedidos sincronizados do Firebase:", window.pedidos.length);
         
-        // Redesenha a cozinha e o caixa automaticamente
-        if (typeof renderizarCozinha === 'function') renderizarCozinha();
-        if (typeof renderizarCaixa === 'function') renderizarCaixa();
+        // Executa o callback passando a lista atualizada
+        callback(lista);
         
     }, (error) => {
-        console.error("Erro ao sincronizar pedidos do Firebase:", error);
+        console.error(`Erro ao sincronizar ${nomeColecao}:`, error);
     });
 }
 
