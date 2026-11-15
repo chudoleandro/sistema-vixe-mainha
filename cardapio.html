@@ -305,20 +305,13 @@
         return;
     }
 
-    // Coleta os dados utilizando os IDs corretos do seu formulário HTML (`cli-...`)
-    const nomeInput = document.getElementById('cli-nome');
-    const telInput = document.getElementById('cli-tel');
-    const endInput = document.getElementById('cli-end');
-    const obsInput = document.getElementById('cli-obs');
-    const pagSelect = document.getElementById('cli-pagamento');
-    const trocoInput = document.getElementById('cli-troco');
-
-    const nome = nomeInput ? nomeInput.value.trim() : '';
-    const tel = telInput ? telInput.value.trim() : '';
-    const end = endInput ? endInput.value.trim() : '';
-    const obs = obsInput ? obsInput.value.trim() : '';
-    const pagamento = pagSelect ? pagSelect.value : 'PIX';
-    const trocoInfo = trocoInput ? trocoInput.value.trim() : '';
+    // Coleta os dados dos inputs do cliente
+    const nome = document.getElementById('cli-nome')?.value.trim() || '';
+    const tel = document.getElementById('cli-tel')?.value.trim() || '';
+    const end = document.getElementById('cli-end')?.value.trim() || '';
+    const obs = document.getElementById('cli-obs')?.value.trim() || '';
+    const pagamento = document.getElementById('cli-pagamento')?.value || 'PIX';
+    const trocoInfo = document.getElementById('cli-troco')?.value.trim() || '';
 
     const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
 
@@ -327,7 +320,7 @@
         return;
     }
 
-    // Calcula o subtotal e o total geral de forma segura
+    // Calcula subtotal e total geral com segurança
     const subtotal = carrinho.reduce((acc, i) => {
         const precoItem = parseFloat(i.preco || 0);
         const qtdItem = parseInt(i.qtd || 1);
@@ -337,42 +330,40 @@
     const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
     const totalGeral = subtotal + taxa;
     const pedidoId = String(Date.now());
-    
-    // Gera um número de pedido aleatório de 3 dígitos (101 a 999)
     const numeroPedido = Math.floor(Math.random() * 900) + 101;
-
     const enderecoFinal = obs ? `${end} (Obs: ${obs})` : end;
 
+    // Objeto do pedido limpo (GARANTINDO QUE NÃO EXISTE NENHUM 'undefined')
     const novoPedido = {
         id: pedidoId,
-        numero: numeroPedido,
-        cliente: nome,
-        tel: tel,
-        end: enderecoFinal,
+        numero: Number(numeroPedido),
+        cliente: String(nome),
+        tel: String(tel),
+        end: String(enderecoFinal),
         itens: carrinho.map(c => ({
             id: String(c.id || ''),
-            nome: c.nome || 'Item',
-            tamanho: c.tamanho || 'M',
+            nome: String(c.nome || 'Item'),
+            tamanho: String(c.tamanho || 'M'),
             qtdCarrinho: parseInt(c.qtd) || 1,
             totalItem: (parseFloat(c.preco) || 0) * (parseInt(c.qtd) || 1)
         })),
-        taxa: taxa,
-        total: totalGeral,
-        pagamento: pagamento,
-        trocoInfo: (pagamento === 'DINHEIRO' && trocoInfo) ? trocoInfo : null,
-        status: 'pendente', // Entra como pendente para aparecer na Cozinha
+        taxa: Number(taxa),
+        total: Number(totalGeral),
+        pagamento: String(pagamento),
+        trocoInfo: (pagamento === 'DINHEIRO' && trocoInfo) ? String(trocoInfo) : null,
+        status: 'pendente',
         criadoEm: new Date().toISOString()
     };
 
     try {
-        console.log("Iniciando envio para o Firestore na coleção 'pedidos', ID:", pedidoId);
-        
-        // Força a checagem se o db é válido e executa com .then/.catch explícito
+        console.log("🔥 Enviando pedido limpo para o Firestore...", novoPedido);
+
+        // GRAVAÇÃO COMUM COM VALIDAÇÃO DE PROMESSA
         await db.collection('pedidos').doc(pedidoId).set(novoPedido);
         
-        console.log("SUCESSO ABSOLUTO: O Firestore confirmou a gravação do pedido:", pedidoId);
+        console.log("✅ SUCESSO! Pedido gravado na nuvem com ID:", pedidoId);
         
-        // Restante do seu código de sucesso...
+        // Atualiza a interface de sucesso para o cliente
         const elSucessoNum = document.getElementById('sucesso-num-pedido');
         if (elSucessoNum) {
             elSucessoNum.innerText = `Pedido #${numeroPedido}`;
@@ -384,22 +375,22 @@
         const modalSucesso = document.getElementById('modal-sucesso');
         if (modalSucesso) modalSucesso.classList.remove('hidden');
 
+        // Limpa o carrinho e reseta os campos
         carrinhoCli = [];
-        if (nomeInput) nomeInput.value = '';
-        if (telInput) telInput.value = '';
-        if (endInput) endInput.value = '';
-        if (obsInput) obsInput.value = '';
-        if (trocoInput) trocoInput.value = '';
-        if (pagSelect) pagSelect.value = 'PIX';
+        if (document.getElementById('cli-nome')) document.getElementById('cli-nome').value = '';
+        if (document.getElementById('cli-tel')) document.getElementById('cli-tel').value = '';
+        if (document.getElementById('cli-end')) document.getElementById('cli-end').value = '';
+        if (document.getElementById('cli-obs')) document.getElementById('cli-obs').value = '';
+        if (document.getElementById('cli-troco')) document.getElementById('cli-troco').value = '';
+        if (document.getElementById('cli-pagamento')) document.getElementById('cli-pagamento').value = 'PIX';
 
         if (typeof toggleFormaPagamento === 'function') toggleFormaPagamento('PIX');
         if (typeof atualizarBarraCarrinho === 'function') atualizarBarraCarrinho();
         if (typeof renderizarItensModal === 'function') renderizarItensModal();
 
     } catch (error) {
-        // ISSO VAI MOSTRAR O ERRO REAL DO FIREBASE NO CONSOLE
-        console.error("ERRO CRÍTICO DO FIREBASE AO SALVAR:", error.code, error.message, error);
-        alert(`FALHA AO SALVAR NO BANCO: ${error.message}`);
+        console.error("❌ ERRO CRÍTICO AO SALVAR NO FIREBASE:", error.code, error.message, error);
+        alert(`Erro ao salvar pedido na nuvem: ${error.message}`);
     }
 }
 
