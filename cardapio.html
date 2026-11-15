@@ -300,18 +300,25 @@
 
         async function enviarPedidoParaFirebase() {
     if (!db) {
-        console.error("Erro: Instância do Firestore 'db' não encontrada.");
-        alert("Erro de conexão com o banco de dados.");
+        console.error("Erro crítico: Instância do Firestore 'db' não encontrada.");
+        alert("Erro de conexão com o banco de dados. Recarregue a página.");
         return;
     }
 
-    // Coleta os dados dos inputs do cliente
-    const nome = document.getElementById('cli-nome')?.value.trim() || '';
-    const tel = document.getElementById('cli-tel')?.value.trim() || '';
-    const end = document.getElementById('cli-end')?.value.trim() || '';
-    const obs = document.getElementById('cli-obs')?.value.trim() || '';
-    const pagamento = document.getElementById('cli-pagamento')?.value || 'PIX';
-    const trocoInfo = document.getElementById('cli-troco')?.value.trim() || '';
+    // 1. Coleta e validação segura dos inputs do cliente
+    const nomeInput = document.getElementById('cli-nome');
+    const telInput = document.getElementById('cli-tel');
+    const endInput = document.getElementById('cli-end');
+    const obsInput = document.getElementById('cli-obs');
+    const pagSelect = document.getElementById('cli-pagamento');
+    const trocoInput = document.getElementById('cli-troco');
+
+    const nome = nomeInput ? nomeInput.value.trim() : '';
+    const tel = telInput ? telInput.value.trim() : '';
+    const end = endInput ? endInput.value.trim() : '';
+    const obs = obsInput ? obsInput.value.trim() : '';
+    const pagamento = pagSelect ? pagSelect.value : 'PIX';
+    const trocoInfo = trocoInput ? trocoInput.value.trim() : '';
 
     const carrinho = Array.isArray(carrinhoCli) ? carrinhoCli : [];
 
@@ -320,7 +327,7 @@
         return;
     }
 
-    // Calcula subtotal e total geral com segurança
+    // 2. Cálculos financeiros precisos
     const subtotal = carrinho.reduce((acc, i) => {
         const precoItem = parseFloat(i.preco || 0);
         const qtdItem = parseInt(i.qtd || 1);
@@ -329,11 +336,13 @@
 
     const taxa = typeof TAXA_ENTREGA !== 'undefined' ? parseFloat(TAXA_ENTREGA) || 0 : 0;
     const totalGeral = subtotal + taxa;
+    
+    // IDs padronizados estritamente como string
     const pedidoId = String(Date.now());
     const numeroPedido = Math.floor(Math.random() * 900) + 101;
     const enderecoFinal = obs ? `${end} (Obs: ${obs})` : end;
 
-    // Objeto do pedido limpo (GARANTINDO QUE NÃO EXISTE NENHUM 'undefined')
+    // 3. Montagem do payload 100% livre de 'undefined'
     const novoPedido = {
         id: pedidoId,
         numero: Number(numeroPedido),
@@ -356,14 +365,22 @@
     };
 
     try {
-        console.log("🔥 Enviando pedido limpo para o Firestore...", novoPedido);
+        console.log("🚀 [CARDÁPIO] Gravando pedido na coleção 'pedidos' do Firestore...", novoPedido);
 
-        // GRAVAÇÃO COMUM COM VALIDAÇÃO DE PROMESSA
+        // Envio direto para a coleção exata 'pedidos'
         await db.collection('pedidos').doc(pedidoId).set(novoPedido);
         
-        console.log("✅ SUCESSO! Pedido gravado na nuvem com ID:", pedidoId);
+        console.log("✅ [CARDÁPIO] Pedido gravado com sucesso na nuvem! ID:", pedidoId);
+
+        // TESTE DE AUDITORIA IMEDIATA: Confirma se o documento realmente existe no banco
+        const docVerificacao = await db.collection('pedidos').doc(pedidoId).get();
+        if (docVerificacao.exists) {
+            console.log("🔍 [AUDITORIA] Documento confirmado no servidor Firestore!");
+        } else {
+            console.warn("⚠️ [AUDITORIA] O documento foi enviado, mas o servidor demorou a responder.");
+        }
         
-        // Atualiza a interface de sucesso para o cliente
+        // 4. Atualização da interface do cliente
         const elSucessoNum = document.getElementById('sucesso-num-pedido');
         if (elSucessoNum) {
             elSucessoNum.innerText = `Pedido #${numeroPedido}`;
@@ -375,14 +392,14 @@
         const modalSucesso = document.getElementById('modal-sucesso');
         if (modalSucesso) modalSucesso.classList.remove('hidden');
 
-        // Limpa o carrinho e reseta os campos
+        // 5. Limpeza de dados locais do carrinho e formulário
         carrinhoCli = [];
-        if (document.getElementById('cli-nome')) document.getElementById('cli-nome').value = '';
-        if (document.getElementById('cli-tel')) document.getElementById('cli-tel').value = '';
-        if (document.getElementById('cli-end')) document.getElementById('cli-end').value = '';
-        if (document.getElementById('cli-obs')) document.getElementById('cli-obs').value = '';
-        if (document.getElementById('cli-troco')) document.getElementById('cli-troco').value = '';
-        if (document.getElementById('cli-pagamento')) document.getElementById('cli-pagamento').value = 'PIX';
+        if (nomeInput) nomeInput.value = '';
+        if (telInput) telInput.value = '';
+        if (endInput) endInput.value = '';
+        if (obsInput) obsInput.value = '';
+        if (trocoInput) trocoInput.value = '';
+        if (pagSelect) pagSelect.value = 'PIX';
 
         if (typeof toggleFormaPagamento === 'function') toggleFormaPagamento('PIX');
         if (typeof atualizarBarraCarrinho === 'function') atualizarBarraCarrinho();
