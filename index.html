@@ -1263,14 +1263,135 @@
         }
 
         // Variável global para rastrear a quantidade anterior de pedidos em aberto e evitar tocar som ao carregar a página pela primeira vez
-let ultimoContadorEmApreparo = null;
+// =========================================================================
+// CONTROLE DE ÁUDIO E DETECÇÃO EM TEMPO REAL DE NOVOS PEDIDOS
+// =========================================================================
+let audioCtxGlobal = null;
+let cargaInicialPedidosConcluida = false;
+const idsPedidosConhecidos = new Set();
 
+// Desbloqueia o áudio do navegador assim que o operador clicar em qualquer lugar da tela
+document.addEventListener('click', () => {
+    if (!audioCtxGlobal) {
+        audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxGlobal.state === 'suspended') {
+        audioCtxGlobal.resume();
+    }
+}, { once: false });
+
+// Função que emite um "BIP-BIP" duplo bem claro para chamar atenção na cozinha
+function tocarAlertaNovoPedido() {
+    try {
+        if (!audioCtxGlobal) {
+            audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtxGlobal.state === 'suspended') {
+            audioCtxGlobal.resume();
+        }
+
+        const agora = audioCtxGlobal.currentTime;
+
+        // Primeiro BIP (Agudo e claro)
+        const osc1 = audioCtxGlobal.createOscillator();
+        const gain1 = audioCtxGlobal.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(880, agora); // Nota A5
+        gain1.gain.setValueAtTime(0.4, agora);
+        gain1.gain.exponentialRampToValueAtTime(0.01, agora + 0.18);
+        osc1.connect(gain1);
+        gain1.connect(audioCtxGlobal.destination);
+        osc1.start(agora);
+        osc1.stop(agora + 0.18);
+
+        // Segundo BIP logo em seguida (Mais agudo - estilo campainha de balcão)
+        const osc2 = audioCtxGlobal.createOscillator();
+        const gain2 = audioCtxGlobal.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1174.66, agora + 0.22); // Nota D6
+        gain2.gain.setValueAtTime(0.45, agora + 0.22);
+        gain2.gain.exponentialRampToValueAtTime(0.01, agora + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(audioCtxGlobal.destination);
+        osc2.start(agora + 0.22);
+        osc2.stop(agora + 0.55);
+
+        console.log("🔔 BIP! Novo pedido em espera detectado!");
+    } catch (e) {
+        console.warn("⚠️ O navegador bloqueou o som automático. Clique em qualquer lugar da tela para ativar o áudio.", e);
+    }
+}
+
+// =========================================================================
+// ESCUTA EM TEMPO REAL DO FIRESTORE (SEM DUPLICAR + BIP IMEDIATO)
+// =========================================================================
+function iniciarEscutaPedidosTempoReal() {
+    if (!db) return;
+
+    db.collection('pedidos').onSnapshot((snapshot) => {
+        const mapaPedidos = new Map();
+
+        if (typeof pedidos !== 'undefined' && Array.isArray(pedidos)) {
+            pedidos.forEach(p => mapaPedidos.set(String(p.id), p));
+        }
+
+        let caiuPedidoNovoAgora = false;
+
+        snapshot.docChanges().forEach((change) => {
+            const docData = change.doc.data();
+            const idStr = String(docData.id || change.doc.id);
+
+            if (change.type === 'added') {
+                mapaPedidos.set(idStr, { ...docData, id: idStr });
+
+                // Se já passou a carga inicial da página e esse ID ainda não havia sido visto:
+                if (cargaInicialPedidosConcluida && !idsPedidosConhecidos.has(idStr)) {
+                    const statusPedido = String(docData.status || '').toLowerCase();
+                    // Toca o bip se caiu em espera ('pendente') ou entrou na cozinha ('preparacao')
+                    if (statusPedido === 'pendente' || statusPedido === 'preparacao') {
+                        caiuPedidoNovoAgora = true;
+                    }
+                }
+                idsPedidosConhecidos.add(idStr);
+            }
+
+            if (change.type === 'modified') {
+                mapaPedidos.set(idStr, { ...docData, id: idStr });
+            }
+
+            if (change.type === 'removed') {
+                mapaPedidos.delete(idStr);
+                idsPedidosConhecidos.delete(idStr);
+            }
+        });
+
+        // Marca que a primeira leitura do banco já terminou
+        cargaInicialPedidosConcluida = true;
+
+        // Atualiza o array global sem nenhuma duplicata
+        pedidos = Array.from(mapaPedidos.values());
+
+        // Dispara o BIP na hora se entrou pedido novo
+        if (caiuPedidoNovoAgora) {
+            tocarAlertaNovoPedido();
+        }
+
+        // Atualiza a tela da cozinha e o contador
+        if (typeof renderizarCozinha === 'function') renderizarCozinha();
+        if (typeof atualizarContadorCozinha === 'function') atualizarContadorCozinha();
+    }, (error) => {
+        console.error("Erro na escuta em tempo real de pedidos:", error);
+    });
+}
+
+// =========================================================================
+// CONTADOR DE PEDIDOS DA COZINHA (BADGE)
+// =========================================================================
 function atualizarContadorCozinha() {
     if (typeof pedidos === 'undefined' || !Array.isArray(pedidos)) return;
 
     const hojeStr = typeof obterDataAtualStr === 'function' ? obterDataAtualStr() : new Date().toLocaleDateString('pt-BR');
 
-    // 1. Blindagem contra duplicidade (mesma lógica usada na cozinha)
     const idsUnicos = new Set();
     const pedidosUnicos = [];
     pedidos.forEach(p => {
@@ -1281,73 +1402,38 @@ function atualizarContadorCozinha() {
         }
     });
 
-    // 2. Filtra os pedidos ativos de hoje de forma 100% segura
     const emPreparo = pedidosUnicos.filter(p => {
         if (!p.status) return false;
 
         const statusLower = String(p.status).toLowerCase();
-        // Conta pendentes, em preparação e em entrega
         const ativo = (statusLower === 'pendente' || statusLower === 'preparacao' || statusLower === 'entrega');
         if (!ativo) return false;
 
-        // Extração de data segura (compatível com timestamp ou string)
         let dataPedidoStr = hojeStr;
         try {
             const timestampNum = Number(p.id);
             if (!isNaN(timestampNum)) {
                 dataPedidoStr = new Date(timestampNum).toLocaleDateString('pt-BR');
+            } else if (p.criadoEm) {
+                dataPedidoStr = new Date(p.criadoEm).toLocaleDateString('pt-BR');
             } else if (p.data) {
                 dataPedidoStr = String(p.data).split(' ')[0];
             }
-        } catch(e) {
+        } catch (e) {
             dataPedidoStr = hojeStr;
         }
 
         return dataPedidoStr === hojeStr;
     }).length;
 
-    // 3. Toca som de alerta se o número de pedidos ativos aumentou
-    if (ultimoContadorEmApreparo !== null && emPreparo > ultimoContadorEmApreparo) {
-        tocarAlertaNovoPedido();
-    }
-    ultimoContadorEmApreparo = emPreparo;
-
-    // 4. Atualiza o badge na interface
     const badge = document.getElementById('badge-pedidos-cozinha');
     if (badge) {
         badge.innerText = emPreparo;
-        // Opcional: Destaca visualmente se houver pedidos pendentes
         if (emPreparo > 0) {
             badge.classList.remove('hidden');
         } else {
             badge.classList.add('hidden');
         }
-    }
-}
-
-// Função para gerar um bipe/som de alerta nativo via API de Áudio do Navegador (sem precisar de arquivos externos)
-function tocarAlertaNovoPedido() {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
-        oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // Sobe o tom
-
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.5);
-        
-        console.log("🔔 Novo pedido detectado! Alerta sonoro disparado.");
-    } catch (e) {
-        console.warn("Não foi possível reproduzir o som de alerta automaticamente:", e);
     }
 }
 
