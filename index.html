@@ -2198,6 +2198,19 @@ function imprimirComanda(pedido) {
         }
     }
     
+    // BLINDAGEM CONTRA DUPLICIDADE: Remove IDs repetidos do array global de pedidos antes de processar
+    const idsUnicos = new Set();
+    const pedidosUnicos = [];
+    if (typeof pedidos !== 'undefined' && Array.isArray(pedidos)) {
+        pedidos.forEach(p => {
+            const pId = String(p.id);
+            if (!idsUnicos.has(pId)) {
+                idsUnicos.add(pId);
+                pedidosUnicos.push(p);
+            }
+        });
+    }
+    
     colunas.forEach(st => {
         const box = document.getElementById(`coluna-${st}`);
         const countBadge = document.getElementById(`count-${st}`);
@@ -2205,9 +2218,7 @@ function imprimirComanda(pedido) {
         
         box.innerHTML = '';
         
-        if (typeof pedidos === 'undefined' || !Array.isArray(pedidos)) return;
-
-        const filtrados = pedidos.filter(p => {
+        const filtrados = pedidosUnicos.filter(p => {
             if (!p.status) return false;
             
             // Padroniza a comparação do status (minúsculas)
