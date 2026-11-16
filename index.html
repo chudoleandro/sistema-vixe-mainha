@@ -2349,7 +2349,7 @@ function imprimirComanda(pedido) {
         alert("Erro ao finalizar a venda. Verifique o console (F12).");
     }
 }
-        function renderizarCozinha(dataFiltroCustom = null) {
+       function renderizarCozinha(dataFiltroCustom = null) {
     const colunas = ['pendente', 'preparacao', 'entrega', 'finalizado'];
     const hojeStr = obterDataAtualStr();
     const dataAlvo = dataFiltroCustom || hojeStr;
@@ -2486,7 +2486,7 @@ function imprimirComanda(pedido) {
                         </div>
                     </div>
 
-                    <div class="p-2.5 bg-slate-50 border-t border-slate-100">
+                    <div class="p-2.5 bg-slate-50 border-t border-slate-100 space-y-2">
                         ${st === 'pendente' ? `
                             <div class="grid grid-cols-2 gap-2">
                                 <button onclick="recusarPedidoOnline('${p.id}')" class="bg-rose-100 text-rose-700 hover:bg-rose-200 font-extrabold py-2 rounded-lg text-xs transition border border-rose-200">✖ Recusar</button>
@@ -2512,11 +2512,49 @@ function imprimirComanda(pedido) {
                                 ✔ Pedido Entregue com Sucesso
                             </div>
                         ` : ''}
+
+                        <!-- Botão universal de cancelar para pedidos que ainda não foram finalizados -->
+                        ${st !== 'finalizado' ? `
+                            <button onclick="cancelarPedidoCozinha('${p.id}')" class="w-full bg-red-50 text-red-600 hover:bg-red-100 font-bold py-1.5 rounded-lg text-[11px] transition border border-red-200 flex items-center justify-center space-x-1">
+                                <span>🗑️ Cancelar Pedido / Desistência</span>
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
         });
     });
+}
+
+        async function cancelarPedidoCozinha(pedidoId) {
+    if (!confirm("Tem certeza que deseja cancelar este pedido por desistência do cliente?")) {
+        return;
+    }
+
+    if (!db) {
+        alert("Erro: Banco de dados não conectado.");
+        return;
+    }
+
+    try {
+        // Opção 1: Deletar do Firestore (ou você pode atualizar o status para 'cancelado' se preferir guardar histórico)
+        await db.collection('pedidos').doc(String(pedidoId)).delete();
+        
+        // Remove também do array local imediatamente para atualizar a tela sem atraso
+        if (typeof pedidos !== 'undefined' && Array.isArray(pedidos)) {
+            pedidos = pedidos.filter(p => String(p.id) !== String(pedidoId));
+        }
+
+        // Re-renderiza a cozinha e atualiza o contador
+        if (typeof renderizarCozinha === 'function') renderizarCozinha();
+        if (typeof atualizarContadorCozinha === 'function') atualizarContadorCozinha();
+
+        console.log(`Pedido ${pedidoId} cancelado e removido com sucesso.`);
+        alert("Pedido cancelado com sucesso.");
+    } catch (error) {
+        console.error("Erro ao cancelar pedido:", error);
+        alert("Não foi possível cancelar o pedido. Verifique o console.");
+    }
 }
 
         function filtrarComandasCozinhaHistorico() {
