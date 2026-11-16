@@ -1262,15 +1262,94 @@
             alert(`Adicionais copiados com sucesso!`);
         }
 
-        function atualizarContadorCozinha() {
-            const hojeStr = obterDataAtualStr();
-            const emPreparo = pedidos.filter(p => {
-                const dataPedido = new Date(p.id).toLocaleDateString('pt-BR');
-                return dataPedido === hojeStr && (p.status === 'pendente' || p.status === 'preparacao' || p.status === 'entrega');
-            }).length;
-            const badge = document.getElementById('badge-pedidos-cozinha');
-            if(badge) badge.innerText = emPreparo;
+        // Variável global para rastrear a quantidade anterior de pedidos em aberto e evitar tocar som ao carregar a página pela primeira vez
+let ultimoContadorEmApreparo = null;
+
+function atualizarContadorCozinha() {
+    if (typeof pedidos === 'undefined' || !Array.isArray(pedidos)) return;
+
+    const hojeStr = typeof obterDataAtualStr === 'function' ? obterDataAtualStr() : new Date().toLocaleDateString('pt-BR');
+
+    // 1. Blindagem contra duplicidade (mesma lógica usada na cozinha)
+    const idsUnicos = new Set();
+    const pedidosUnicos = [];
+    pedidos.forEach(p => {
+        const pId = String(p.id);
+        if (!idsUnicos.has(pId)) {
+            idsUnicos.add(pId);
+            pedidosUnicos.push(p);
         }
+    });
+
+    // 2. Filtra os pedidos ativos de hoje de forma 100% segura
+    const emPreparo = pedidosUnicos.filter(p => {
+        if (!p.status) return false;
+
+        const statusLower = String(p.status).toLowerCase();
+        // Conta pendentes, em preparação e em entrega
+        const ativo = (statusLower === 'pendente' || statusLower === 'preparacao' || statusLower === 'entrega');
+        if (!ativo) return false;
+
+        // Extração de data segura (compatível com timestamp ou string)
+        let dataPedidoStr = hojeStr;
+        try {
+            const timestampNum = Number(p.id);
+            if (!isNaN(timestampNum)) {
+                dataPedidoStr = new Date(timestampNum).toLocaleDateString('pt-BR');
+            } else if (p.data) {
+                dataPedidoStr = String(p.data).split(' ')[0];
+            }
+        } catch(e) {
+            dataPedidoStr = hojeStr;
+        }
+
+        return dataPedidoStr === hojeStr;
+    }).length;
+
+    // 3. Toca som de alerta se o número de pedidos ativos aumentou
+    if (ultimoContadorEmApreparo !== null && emPreparo > ultimoContadorEmApreparo) {
+        tocarAlertaNovoPedido();
+    }
+    ultimoContadorEmApreparo = emPreparo;
+
+    // 4. Atualiza o badge na interface
+    const badge = document.getElementById('badge-pedidos-cozinha');
+    if (badge) {
+        badge.innerText = emPreparo;
+        // Opcional: Destaca visualmente se houver pedidos pendentes
+        if (emPreparo > 0) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+}
+
+// Função para gerar um bipe/som de alerta nativo via API de Áudio do Navegador (sem precisar de arquivos externos)
+function tocarAlertaNovoPedido() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nota D5
+        oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15); // Sobe o tom
+
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.5);
+        
+        console.log("🔔 Novo pedido detectado! Alerta sonoro disparado.");
+    } catch (e) {
+        console.warn("Não foi possível reproduzir o som de alerta automaticamente:", e);
+    }
+}
 
         function atualizarDashboard() {
             const hojeStr = obterDataAtualStr();
